@@ -1,101 +1,90 @@
+/* ---------------------------------------------------------------------------
+   TEEMAVÄRIT JA TYYLIT - RAITTIUSSEURANTA
+   --------------------------------------------------------------------------- */
+
+/* 1. Terracotta-teema */
+.theme-terracotta {
+  --primary: #c05621;
+  --primary-hover: #9c4221;
+  --header-gradient: linear-gradient(135deg, #dd6b20 0%, #c05621 100%);
+  --bg-gradient: linear-gradient(135deg, #fffaf0 0%, #feebc8 100%);
+}
+
+/* 2. Indigo-teema */
+.theme-indigo {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --header-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+/* 3. Metsänvihreä-teema */
+.theme-forest {
+  --primary: #059669;
+  --primary-hover: #047857;
+  --header-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --bg-gradient: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+/* 4. Merensininen-teema */
+.theme-ocean {
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --header-gradient: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  --bg-gradient: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+:root {
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #f1f5f9;
+  --input-bg: #f8fafc;
+  --input-border: #cbd5e1;
+  --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  --radius-lg: 16px;
+  --radius-md: 10px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
 }
 
-/* YLÄOSAN VÄRIT */
-.app-container.theme-terracotta {
-  --primary-gradient: linear-gradient(135deg, #C86D51 0%, #A04936 100%);
-  --primary-color: #A04936;
-}
-
-.app-container.theme-forest {
-  --primary-gradient: linear-gradient(135deg, #2D6A4F 0%, #1B4332 100%);
-  --primary-color: #2D6A4F;
-}
-
-.app-container.theme-ocean {
-  --primary-gradient: linear-gradient(135deg, #2A6F97 0%, #014F86 100%);
-  --primary-color: #2A6F97;
-}
-
-.app-container.theme-midnight {
-  --primary-gradient: linear-gradient(135deg, #2D3748 0%, #1A202C 100%);
-  --primary-color: #2D3748;
-}
-
-/* ALATUKSEN / KORTTIALUEEN VÄRIT (SEN VAIHTOEHTONA, MIKÄ ENNEN OLI VAIN VALKOINEN) */
 body {
-  background-color: #e4e9f0;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-main);
   min-height: 100vh;
-  padding-bottom: 40px;
-}
-
-.app-container.bg-theme-sand {
-  background-color: #FAF6F0;
-  color: #3C2A21;
-  --input-bg: #FFFDF9;
-  --border-color: #F0E4D8;
-}
-
-.app-container.bg-theme-mint {
-  background-color: #F1F8F4;
-  color: #1B4332;
-  --input-bg: #FFFFFF;
-  --border-color: #D0E1D4;
-}
-
-.app-container.bg-theme-sky {
-  background-color: #F0F6FA;
-  color: #014F86;
-  --input-bg: #FFFFFF;
-  --border-color: #D0E2EC;
-}
-
-.app-container.bg-theme-latte {
-  background-color: #EFEBE9;
-  color: #3E2723;
-  --input-bg: #FAFAFA;
-  --border-color: #D7CCC8;
+  padding: 20px 12px;
 }
 
 .app-container {
-  width: 100%;
-  max-width: 440px;
+  max-width: 540px;
+  margin: 0 auto;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-  border-radius: 0 0 24px 24px;
-  overflow: hidden;
 }
 
 .header {
-  background: var(--primary-gradient, linear-gradient(135deg, #C86D51 0%, #A04936 100%));
-  color: #FFFFFF;
+  background: var(--header-gradient);
+  color: #ffffff;
   padding: 28px 20px 20px 20px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   text-align: center;
-  border-bottom-left-radius: 20px;
-  border-bottom-right-radius: 20px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  margin-bottom: 20px;
 }
 
 .header h1 {
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
   margin-bottom: 6px;
 }
 
 .header p {
-  font-size: 0.9rem;
-  opacity: 0.92;
-  font-weight: 300;
+  font-size: 0.95rem;
+  opacity: 0.9;
 }
 
 .nav-menu {
@@ -103,153 +92,128 @@ body {
   gap: 6px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-top: 18px;
+  margin-top: 20px;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 6px;
+  border-radius: 30px;
+  backdrop-filter: blur(8px);
 }
 
 .nav-menu button {
   padding: 8px 14px !important;
   border-radius: 20px !important;
-  font-size: 0.82rem !important;
-  transition: all 0.2s ease-in-out !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  border: none !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
 }
 
 .nav-menu button:hover {
-  transform: translateY(-1px);
-}
-
-.main-content {
-  padding: 20px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
 .card {
-  background: #FFFFFF;
-  border-radius: 16px;
-  padding: 20px;
-  border: 1px solid var(--border-color, #E6D8CB);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .card h2 {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  margin-bottom: 14px;
-  color: inherit;
+  color: var(--text-main);
+  margin-bottom: 16px;
+}
+
+.savings-amount {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: var(--primary);
+  text-align: center;
+  margin: 10px 0;
 }
 
 .counter-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  text-align: center;
   margin-top: 12px;
 }
 
 .counter-box {
-  background: var(--input-bg, #FFFDF9);
-  padding: 14px 8px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color, #F0E4D8);
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  padding: 12px 8px;
+  border-radius: var(--radius-md);
+  text-align: center;
 }
 
 .counter-number {
   font-size: 1.5rem;
   font-weight: 800;
-  color: var(--primary-color, #A04936);
-  line-height: 1.2;
+  color: var(--primary);
 }
 
 .counter-label {
-  font-size: 0.7rem;
-  color: #718096;
-  font-weight: 600;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  margin-top: 4px;
-}
-
-.savings-amount {
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: #D97706;
-  text-align: center;
-  margin: 10px 0;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-top: 2px;
 }
 
 .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 14px;
 }
 
 .form-group label {
-  display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  margin-bottom: 6px;
+  color: var(--text-muted);
 }
 
-.form-group input, 
-.form-group textarea {
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+textarea {
   width: 100%;
-  padding: 12px;
-  border: 1.5px solid var(--border-color, #E6D8CB);
-  border-radius: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--input-border);
+  background-color: var(--input-bg);
   font-size: 0.95rem;
-  color: inherit;
-  background-color: var(--input-bg, #FFFDF9);
+  color: var(--text-main);
   outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.form-group input:focus, 
-.form-group textarea:focus {
-  border-color: var(--primary-color, #A04936);
-  background-color: #FFFFFF;
-  box-shadow: 0 0 0 3px rgba(160, 73, 54, 0.15);
+input:focus, textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  background-color: #ffffff;
 }
 
-button.btn-primary {
+.btn-primary {
   width: 100%;
-  background: var(--primary-gradient, linear-gradient(135deg, #C86D51 0%, #A04936 100%));
-  color: white;
-  border: none;
   padding: 14px;
-  border-radius: 10px;
-  font-size: 0.95rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--primary);
+  color: #ffffff;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
-button.btn-primary:hover {
-  transform: translateY(-1px);
-}
-
-.journal-item {
-  background: #FFFFFF;
-  padding: 14px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  border: 1px solid var(--border-color, #F0E4D8);
-}
-
-.journal-date {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--primary-color, #A04936);
-  margin-bottom: 4px;
-}
-/* Pienet mobiilinäytöt (alle 380px) */
-@media (max-width: 380px) {
-  .nav-menu button {
-    padding: 6px 8px !important;
-    font-size: 0.75rem !important;
-  }
-
-  .counter-number {
-    font-size: 1.2rem;
-  }
+.btn-primary:hover {
+  background-color: var(--primary-hover);
 }

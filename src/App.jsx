@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import './App.css'
 
 // ---------------------------------------------------------------------------
-// 1. OMAT SUPABASE-TIEDOT
+// 1. SUPABASE-YHTEYS
 // ---------------------------------------------------------------------------
 const SUPABASE_URL = 'https://gynvmhchddfdpzlychsf.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_O9hk82owcPxO-wCf1CbbYA_cPhXxnsW'
@@ -52,7 +52,6 @@ const translations = {
     addBtn: "Lisää seurantaan",
     journalTitle: "Päiväkirja (Journal)",
     selectJournalDateLabel: "Valitse tarkasteltava tai muokattava päivä:",
-    futureDateNotice: "Tulevaisuuden päiviä ei voi valita.",
     journalEntryFor: "Päivän",
     journalEntrySuffix: " merkintä:",
     journalPlaceholderToday: "Miltä tänään tuntuu?",
@@ -112,7 +111,6 @@ const translations = {
     addBtn: "Start Tracking",
     journalTitle: "Journal & Reflections",
     selectJournalDateLabel: "Select date to view or write:",
-    futureDateNotice: "Future dates cannot be selected.",
     journalEntryFor: "Journal entry for",
     journalEntrySuffix: ":",
     journalPlaceholderToday: "How are you feeling today?",
@@ -162,8 +160,8 @@ function App() {
   const [language, setLanguage] = useState('fi')
   const t = translations[language] || translations.fi
 
+  // TEEMAVÄRI-TILA (Oletuksena terracotta)
   const [themeColor, setThemeColor] = useState('terracotta')
-  const [bgThemeColor, setBgThemeColor] = useState('sand')
 
   const [isSetupComplete, setIsSetupComplete] = useState(false)
   const [username, setUsername] = useState('')
@@ -210,21 +208,21 @@ function App() {
   }, [])
 
   const fetchUserData = async (userId) => {
-    setLoading(true)
     try {
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
-      let profileExists = false
-      if (profile) {
-        setUsername(profile.username || '')
+      if (profile && profile.username) {
+        setUsername(profile.username)
         setBirthDate(profile.birth_date || '')
         if (profile.money_start_date) setMoneyStartDate(profile.money_start_date)
         if (profile.language) setLanguage(profile.language)
-        if (profile.username) profileExists = true
+        setIsSetupComplete(true)
+      } else {
+        setIsSetupComplete(false)
       }
 
       const { data: subs } = await supabase
@@ -234,12 +232,9 @@ function App() {
       
       if (subs) {
         setSubstances(subs)
-        if (subs.length > 0) {
-          profileExists = true
-        }
+      } else {
+        setSubstances([])
       }
-
-      setIsSetupComplete(profileExists)
 
       const { data: costs } = await supabase
         .from('daily_costs')
@@ -294,7 +289,7 @@ function App() {
 
     const userId = session.user.id
 
-    await supabase.from('profiles').upsert({
+    const { error: profErr } = await supabase.from('profiles').upsert({
       id: userId,
       username: username.trim(),
       birth_date: birthDate,
@@ -302,40 +297,65 @@ function App() {
       language: language
     })
 
-    const { data: newSub } = await supabase.from('substances').insert([{
+    if (profErr) {
+      alert('Virhe profiilin tallennuksessa: ' + profErr.message)
+      return
+    }
+
+    const { error: subErr } = await supabase.from('substances').insert([{
       user_id: userId,
       name: newSubstanceName.trim(),
       sober_date: newSoberDate,
       default_daily_cost: parseFloat(newDailyCost) || 0
-    }]).select()
+    }])
 
-    if (newSub) setSubstances(newSub)
-    setIsSetupComplete(true)
+    if (subErr) {
+      alert('Virhe kohteen tallennuksessa: ' + subErr.message)
+      return
+    }
+
+    await fetchUserData(userId)
   }
 
   const handleAddSubstance = async (e) => {
     e.preventDefault()
     if (!newSubstanceName.trim()) return
 
-    const { data, error } = await supabase.from('substances').insert([{
+    const { error } = await supabase.from('substances').insert([{
       user_id: session.user.id,
       name: newSubstanceName.trim(),
       sober_date: newSoberDate,
       default_daily_cost: parseFloat(newDailyCost) || 0
-    }]).select()
+    }])
 
-    if (!error && data) {
-      setSubstances([...substances, data[0]])
+    if (error) {
+      alert('Virhe lisäyksessä: ' + error.message)
+    } else {
       setNewSubstanceName('')
       setNewDailyCost('10')
+      await fetchUserData(session.user.id)
       setActiveTab('home')
     }
   }
 
-  const handleDeleteSubstance = async (id) => {
-    if (window.confirm(t.confirmDelete)) {
-      await supabase.from('substances').delete().eq('id', id)
-      setSubstances(substances.filter(item => item.id !== id))
+  const handleDeleteSubstance = async (substanceId) => {
+    if (!window.confirm(t.confirmDelete)) return
+
+    setSubstances(prev => prev.filter(item => item.id !== substanceId))
+
+    try {
+      const { error } = await supabase
+        .from('substances')
+        .delete()
+        .eq('id', substanceId)
+
+      if (error) {
+        alert('Poisto epäonnistui tietokannassa: ' + error.message)
+        fetchUserData(session.user.id)
+      }
+    } catch (err) {
+      console.error('Virhe poistossa:', err)
+      fetchUserData(session.user.id)
     }
   }
 
@@ -377,11 +397,16 @@ function App() {
     }
 
     setJournalMap(updatedMap)
-    alert(`${t.journalEntryFor} ${formatDate(selectedJournalDate)} saved!`)
+    alert(`${t.journalEntryFor} ${formatDate(selectedJournalDate)} tallennettu!`)
   }
 
   useEffect(() => {
-    if (!isSetupComplete || substances.length === 0) return
+    if (!substances || substances.length === 0) {
+      setTrackerStats([])
+      setTotalSaved(0)
+      setTotalSavedFromSelectedDate(0)
+      return
+    }
 
     let overallMoney = 0
     const updatedStats = substances.map((item) => {
@@ -419,7 +444,7 @@ function App() {
       sIterDate.setDate(sIterDate.getDate() + 1)
     }
     setTotalSavedFromSelectedDate(savedMoneySum)
-  }, [substances, isSetupComplete, selectedSavingsDate])
+  }, [substances, selectedSavingsDate])
 
   useEffect(() => {
     let sum = 0
@@ -446,17 +471,13 @@ function App() {
     setJournalText(journalMap[selectedJournalDate] || '')
   }, [selectedJournalDate, journalMap])
 
-  useEffect(() => {
-    document.documentElement.lang = language === 'en' ? 'en-US' : 'fi-FI'
-  }, [language])
-
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.2rem' }}>Ladataan...</div>
   }
 
   if (!session) {
     return (
-      <div className="app-container theme-terracotta bg-theme-sand">
+      <div className={`app-container theme-${themeColor}`}>
         <header className="header">
           <h1>Raittiusseuranta</h1>
           <p>Kirjaudu sisään tai luo tunnus hallitaksesi tietoja pilvessä.</p>
@@ -489,7 +510,7 @@ function App() {
               <button 
                 type="button" 
                 onClick={() => setIsRegistering(!isRegistering)}
-                style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', width: '100%', fontSize: '0.9rem' }}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', width: '100%', fontSize: '0.9rem' }}
               >
                 {isRegistering ? 'Onko sinulla jo tili? Kirjaudu sisään' : 'Eikö sinulla ole tiliä? Rekisteröidy tästä'}
               </button>
@@ -502,7 +523,7 @@ function App() {
 
   if (!isSetupComplete) {
     return (
-      <div className={`app-container theme-${themeColor} bg-theme-${bgThemeColor}`}>
+      <div className={`app-container theme-${themeColor}`}>
         <header className="header">
           <h1>{t.setupWelcome}</h1>
           <p>{t.setupWelcomeDesc}</p>
@@ -544,18 +565,18 @@ function App() {
   const currentEditCosts = dailyLivingCosts[selectedEditDate] || { food: '', other: '' }
 
   return (
-    <div className={`app-container theme-${themeColor} bg-theme-${bgThemeColor}`}>
+    <div className={`app-container theme-${themeColor}`}>
       <header className="header">
         <h1>{t.headerTitle}</h1>
         <p>{t.headerGreeting} {username}! {t.headerSubtitle}</p>
         
-        <nav className="nav-menu" style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '15px' }}>
-          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'home' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('home')}>{t.tabTracker}</button>
-          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'money' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('money')}>{t.tabSpending}</button>
-          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'savings' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('savings')}>{t.tabSavings}</button>
-          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'add' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('add')}>{t.tabAdd}</button>
-          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'journal' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('journal')}>{t.tabJournal}</button>
-          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'settings' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('settings')}>{t.tabSettings}</button>
+        <nav className="nav-menu">
+          <button style={{ backgroundColor: activeTab === 'home' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>{t.tabTracker}</button>
+          <button style={{ backgroundColor: activeTab === 'money' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('money')}>{t.tabSpending}</button>
+          <button style={{ backgroundColor: activeTab === 'savings' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('savings')}>{t.tabSavings}</button>
+          <button style={{ backgroundColor: activeTab === 'add' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('add')}>{t.tabAdd}</button>
+          <button style={{ backgroundColor: activeTab === 'journal' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('journal')}>{t.tabJournal}</button>
+          <button style={{ backgroundColor: activeTab === 'settings' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('settings')}>{t.tabSettings}</button>
         </nav>
       </header>
 
@@ -566,26 +587,26 @@ function App() {
             <section className="card">
               <h2>{t.totalSavedTitle}</h2>
               <div className="savings-amount">{formatMoney(totalSaved, language)}</div>
-              <p style={{ fontSize: '0.85rem', color: '#6c757d', textAlign: 'center' }}>{t.totalSavedSubtitle}</p>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>{t.totalSavedSubtitle}</p>
             </section>
 
             <section className="card">
               <h2>{t.substancesTitle} ({trackerStats.length})</h2>
               {trackerStats.length === 0 ? (
-                <p style={{ color: '#868e96' }}>{t.noSubstances}</p>
+                <p style={{ color: '#64748b' }}>{t.noSubstances}</p>
               ) : (
                 trackerStats.map((item) => (
-                  <div key={item.id} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '16px' }}>
+                  <div key={item.id} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <h3 style={{ margin: '0 0 8px 0' }}>{item.name}</h3>
-                      <button onClick={() => handleDeleteSubstance(item.id)} style={{ background: 'transparent', border: 'none', color: '#dc3545', cursor: 'pointer', fontSize: '0.85rem' }}>{t.delete}</button>
+                      <button onClick={() => handleDeleteSubstance(item.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}>{t.delete}</button>
                     </div>
                     <div className="counter-grid">
-                      <div className="counter-box"><div className="counter-number">{item.timePassed.days}</div><div className="counter-label">{t.days}</div></div>
-                      <div className="counter-box"><div className="counter-number">{item.timePassed.hours}</div><div className="counter-label">{t.hours}</div></div>
-                      <div className="counter-box"><div className="counter-number">{item.timePassed.minutes}</div><div className="counter-label">{t.minutes}</div></div>
+                      <div className="counter-box"><div className="counter-number">{item.timePassed?.days || 0}</div><div className="counter-label">{t.days}</div></div>
+                      <div className="counter-box"><div className="counter-number">{item.timePassed?.hours || 0}</div><div className="counter-label">{t.hours}</div></div>
+                      <div className="counter-box"><div className="counter-number">{item.timePassed?.minutes || 0}</div><div className="counter-label">{t.minutes}</div></div>
                     </div>
-                    <div style={{ marginTop: '12px', fontSize: '0.9rem', color: '#495057' }}>{t.savedWithSubstance}: <strong>{formatMoney(item.savedMoney, language)}</strong></div>
+                    <div style={{ marginTop: '12px', fontSize: '0.9rem', color: '#475569' }}>{t.savedWithSubstance}: <strong>{formatMoney(item.savedMoney, language)}</strong></div>
                   </div>
                 ))
               )}
@@ -596,26 +617,26 @@ function App() {
         {activeTab === 'money' && (
           <section className="card">
             <h2>{t.spendingTitle}</h2>
-            <p style={{ fontSize: '0.85rem', color: '#6c757d', marginBottom: '16px' }}>{t.spendingDesc}</p>
-            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '14px' }}>
-              <label style={{ fontWeight: 'bold' }}>{t.calcStartDateLabel}</label>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '16px' }}>{t.spendingDesc}</p>
+            <div className="form-group">
+              <label>{t.calcStartDateLabel}</label>
               <input type="date" value={moneyStartDate} max={todayStr} onChange={(e) => setMoneyStartDate(e.target.value)} />
             </div>
-            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '14px' }}>
-              <label style={{ fontWeight: 'bold' }}>{t.editDateLabel}</label>
+            <div className="form-group">
+              <label>{t.editDateLabel}</label>
               <input type="date" value={selectedEditDate} max={todayStr} onChange={(e) => setSelectedEditDate(e.target.value)} />
             </div>
-            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-              <label style={{ fontWeight: 'bold' }}>{t.foodCostLabel} {formatDate(selectedEditDate)}</label>
+            <div className="form-group">
+              <label>{t.foodCostLabel} {formatDate(selectedEditDate)}</label>
               <input type="number" value={currentEditCosts.food} onChange={(e) => handleLivingCostChange(selectedEditDate, 'food', e.target.value)} />
             </div>
-            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-              <label style={{ fontWeight: 'bold' }}>{t.otherCostLabel} {formatDate(selectedEditDate)}</label>
+            <div className="form-group">
+              <label>{t.otherCostLabel} {formatDate(selectedEditDate)}</label>
               <input type="number" value={currentEditCosts.other} onChange={(e) => handleLivingCostChange(selectedEditDate, 'other', e.target.value)} />
             </div>
-            <div style={{ background: '#eef2f7', padding: '16px', borderRadius: '8px', textAlign: 'center', marginTop: '16px' }}>
-              <span style={{ fontSize: '0.9rem', color: '#495057', fontWeight: 'bold' }}>{t.totalSpentRangeLabel}:</span>
-              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: 'var(--primary-color)', marginTop: '6px' }}>{formatMoney(totalLivingSpentRange, language)}</div>
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', textAlign: 'center', marginTop: '16px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 'bold' }}>{t.totalSpentRangeLabel}:</span>
+              <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--primary)', marginTop: '6px' }}>{formatMoney(totalLivingSpentRange, language)}</div>
             </div>
           </section>
         )}
@@ -623,22 +644,22 @@ function App() {
         {activeTab === 'savings' && (
           <section className="card">
             <h2>{t.savingsTitle}</h2>
-            <div style={{ background: 'var(--input-bg)', padding: '14px', borderRadius: '8px', marginBottom: '16px' }}>
+            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
               <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem' }}>{t.formerCostTitle}</h3>
               {substances.map((item) => (
                 <div key={item.id} className="form-group" style={{ marginBottom: '10px' }}>
-                  <label style={{ fontWeight: 'bold' }}>{item.name} ({t.formerCostInputLabel})</label>
+                  <label>{item.name} ({t.formerCostInputLabel})</label>
                   <input type="number" value={item.default_daily_cost} onChange={(e) => handleDefaultCostChange(item.id, e.target.value)} />
                 </div>
               ))}
             </div>
-            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
-              <label style={{ fontWeight: 'bold' }}>{t.calcSavingsStartLabel}</label>
+            <div className="form-group">
+              <label>{t.calcSavingsStartLabel}</label>
               <input type="date" value={selectedSavingsDate} max={todayStr} onChange={(e) => setSelectedSavingsDate(e.target.value)} />
             </div>
-            <div style={{ background: '#eef9f1', padding: '16px', borderRadius: '8px', textAlign: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '0.9rem', color: '#155724', fontWeight: 'bold' }}>{t.savedFromDateLabel}:</span>
-              <div className="savings-amount" style={{ margin: '8px 0 0 0', color: '#2e7d32', fontSize: '2.4rem' }}>{formatMoney(totalSavedFromSelectedDate, language)}</div>
+            <div style={{ background: '#ecfdf5', padding: '16px', borderRadius: '10px', textAlign: 'center', marginBottom: '16px', border: '1px solid #a7f3d0' }}>
+              <span style={{ fontSize: '0.9rem', color: '#047857', fontWeight: 'bold' }}>{t.savedFromDateLabel}:</span>
+              <div className="savings-amount" style={{ margin: '8px 0 0 0', color: '#059669', fontSize: '2.4rem' }}>{formatMoney(totalSavedFromSelectedDate, language)}</div>
             </div>
           </section>
         )}
@@ -667,33 +688,32 @@ function App() {
         {activeTab === 'journal' && (
           <section className="card">
             <h2>{t.journalTitle}</h2>
-            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '6px' }}>
-              <label style={{ fontWeight: 'bold' }}>{t.selectJournalDateLabel}</label>
+            <div className="form-group">
+              <label>{t.selectJournalDateLabel}</label>
               <input type="date" value={selectedJournalDate} max={todayStr} onChange={(e) => setSelectedJournalDate(e.target.value)} />
             </div>
             <form onSubmit={handleSaveJournalEntry} style={{ marginTop: '16px' }}>
               <div className="form-group">
-                <label style={{ fontWeight: 'bold' }}>{t.journalEntryFor} {formatDate(selectedJournalDate)}{t.journalEntrySuffix}</label>
+                <label>{t.journalEntryFor} {formatDate(selectedJournalDate)}{t.journalEntrySuffix}</label>
                 <textarea rows="4" value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder={t.journalPlaceholderToday} />
               </div>
               <button type="submit" className="btn-primary">{t.saveJournalBtn}</button>
             </form>
 
-            {/* Tallennettu merkintä suoraan napin alapuolella */}
-            <div style={{ marginTop: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+            <div style={{ marginTop: '24px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
               <h3 style={{ fontSize: '1rem', marginBottom: '12px' }}>{t.allEntriesTitle}</h3>
               {Object.keys(journalMap).length === 0 ? (
-                <p style={{ color: '#868e96', fontSize: '0.9rem' }}>{t.noEntries}</p>
+                <p style={{ color: '#64748b', fontSize: '0.9rem' }}>{t.noEntries}</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {Object.entries(journalMap)
                     .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
                     .map(([date, content]) => (
-                      <div key={date} style={{ background: 'var(--input-bg)', padding: '14px', borderRadius: '8px', borderLeft: '4px solid var(--primary-color)' }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--primary-color)', marginBottom: '4px' }}>
+                      <div key={date} style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', borderLeft: '4px solid var(--primary)', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '4px' }}>
                           📅 {formatDate(date)}
                         </div>
-                        <div style={{ fontSize: '0.95rem', color: '#333', whiteSpace: 'pre-wrap' }}>
+                        <div style={{ fontSize: '0.95rem', color: '#334155', whiteSpace: 'pre-wrap' }}>
                           {content}
                         </div>
                       </div>
@@ -707,15 +727,88 @@ function App() {
         {activeTab === 'settings' && (
           <section className="card">
             <h2>{t.settingsTitle}</h2>
+            
+            {/* KIELIVALINTA */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ fontWeight: 'bold', marginBottom: '8px' }}>🌐 {t.langLabel}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                <button type="button" onClick={() => setLanguage('fi')} style={{ padding: '10px', borderRadius: '8px', background: language === 'fi' ? 'var(--input-bg)' : '#fff', fontWeight: 'bold', cursor: 'pointer' }}>🇫🇮 Suomi</button>
-                <button type="button" onClick={() => setLanguage('en')} style={{ padding: '10px', borderRadius: '8px', background: language === 'en' ? 'var(--input-bg)' : '#fff', fontWeight: 'bold', cursor: 'pointer' }}>🇬🇧 English</button>
+                <button 
+                  type="button" 
+                  onClick={() => setLanguage('fi')} 
+                  style={{ 
+                    padding: '10px', 
+                    borderRadius: '8px', 
+                    background: language === 'fi' ? 'var(--primary)' : '#f8fafc', 
+                    color: language === 'fi' ? '#fff' : '#0f172a', 
+                    fontWeight: 'bold', 
+                    cursor: 'pointer', 
+                    border: '1px solid #cbd5e1' 
+                  }}
+                >
+                  🇫🇮 Suomi
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setLanguage('en')} 
+                  style={{ 
+                    padding: '10px', 
+                    borderRadius: '8px', 
+                    background: language === 'en' ? 'var(--primary)' : '#f8fafc', 
+                    color: language === 'en' ? '#fff' : '#0f172a', 
+                    fontWeight: 'bold', 
+                    cursor: 'pointer', 
+                    border: '1px solid #cbd5e1' 
+                  }}
+                >
+                  🇬🇧 English
+                </button>
               </div>
             </div>
-            <hr style={{ margin: '24px 0 16px 0' }} />
-            <button onClick={handleLogout} style={{ backgroundColor: '#dc3545', color: '#fff', border: 'none', padding: '12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>
+
+            <hr style={{ margin: '20px 0', borderColor: '#f1f5f9' }} />
+
+            {/* TEEMAVÄRIVILINTA */}
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ fontWeight: 'bold', marginBottom: '8px' }}>🎨 Teemaväri</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setThemeColor('terracotta')} 
+                  style={{ padding: '10px', borderRadius: '8px', background: '#c05621', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
+                >
+                  🟧 Terracotta
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setThemeColor('indigo')} 
+                  style={{ padding: '10px', borderRadius: '8px', background: '#4f46e5', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
+                >
+                  🟪 Moderni Indigo
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setThemeColor('forest')} 
+                  style={{ padding: '10px', borderRadius: '8px', background: '#059669', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
+                >
+                  🟩 Metsänvihreä
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setThemeColor('ocean')} 
+                  style={{ padding: '10px', borderRadius: '8px', background: '#0284c7', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
+                >
+                  🟦 Merensininen
+                </button>
+              </div>
+            </div>
+
+            <hr style={{ margin: '24px 0 16px 0', borderColor: '#f1f5f9' }} />
+
+            {/* ULOSKIRJAUTUMINEN */}
+            <button 
+              onClick={handleLogout} 
+              style={{ backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}
+            >
               {t.logoutBtn}
             </button>
           </section>
