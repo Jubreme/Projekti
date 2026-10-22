@@ -2,26 +2,22 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import './App.css'
 
-// ---------------------------------------------------------------------------
-// 1. SUPABASE-YHTEYS
-// ---------------------------------------------------------------------------
 const SUPABASE_URL = 'https://gynvmhchddfdpzlychsf.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_O9hk82owcPxO-wCf1CbbYA_cPhXxnsW'
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-// Käännösobjekti
 const translations = {
   fi: {
     headerTitle: "Raittiusseuranta",
     headerGreeting: "Hei",
     headerSubtitle: "Hienoa työtä paremman elämän puolesta.",
-    tabTracker: "📊 Seuranta",
-    tabSpending: "💶 Rahankäyttö",
-    tabSavings: "💰 Rahansäästö",
-    tabAdd: "➕ Lisää uusi",
-    tabJournal: "📖 Päiväkirja",
-    tabSettings: "⚙️ Asetukset",
+    tabTracker: "Seuranta",
+    tabSpending: "Rahankäyttö",
+    tabSavings: "Rahansäästö",
+    tabAdd: "Lisää uusi",
+    tabJournal: "Päiväkirja",
+    tabSettings: "Asetukset",
     totalSavedTitle: "Yhteenlasketut säästöt",
     totalSavedSubtitle: "Yhteensä kaikista seurattavista kohteista",
     substancesTitle: "Seurattavat kohteet",
@@ -50,7 +46,7 @@ const translations = {
     soberDateLabel: "Raittiuden aloituspäivä",
     dailyCostBeforeLabel: "Paljonko käytit ennen päivässä rahaa tähän päihteeseen?",
     addBtn: "Lisää seurantaan",
-    journalTitle: "Päiväkirja (Journal)",
+    journalTitle: "Päiväkirja",
     selectJournalDateLabel: "Valitse tarkasteltava tai muokattava päivä:",
     journalEntryFor: "Päivän",
     journalEntrySuffix: " merkintä:",
@@ -59,8 +55,11 @@ const translations = {
     allEntriesTitle: "Tallennetut päiväkirjamerkinnät",
     noEntries: "Ei vielä tallennettuja päiväkirjamerkintöjä.",
     settingsTitle: "Asetukset",
-    settingsDesc: "Mukauta sovelluksen ulkoasua ja kieltä.",
+    settingsDesc: "Mukauta sovelluksen ulkoasua, kieltä ja valuuttaa.",
     langLabel: "Kieli / Language",
+    currencyLabel: "Valuutta",
+    themeLabel: "Teemaväri (Yläpalkki)",
+    bgLabel: "Taustaväri",
     logoutBtn: "Kirjaudu ulos",
     confirmDelete: "Haluatko varmasti poistaa tämän seurannan?",
     setupWelcome: "Tervetuloa Raittiusseurantaan",
@@ -69,18 +68,30 @@ const translations = {
     yourName: "Nimesi",
     birthDate: "Syntymäaika",
     firstSubstance: "Ensimmäinen päihde / tapa",
-    startTrackingBtn: "Aloita seuranta"
+    startTrackingBtn: "Aloita seuranta",
+    themes: {
+      warmBrick: "Lämmin tiili",
+      sunset: "Auringonlasku",
+      autumn: "Syksyn ruska",
+      peach: "Persikka"
+    },
+    backgrounds: {
+      cream: "Kermainen",
+      warmSand: "Lämmin hiekka",
+      softPeach: "Vaalea persikka",
+      lightCoffee: "Kevyt kahvi"
+    }
   },
   en: {
     headerTitle: "Sobriety Tracker",
     headerGreeting: "Hello",
     headerSubtitle: "Great progress towards a healthier lifestyle.",
-    tabTracker: "📊 Tracker",
-    tabSpending: "💶 Living Expenses",
-    tabSavings: "💰 Money Saved",
-    tabAdd: "➕ Add New",
-    tabJournal: "📖 Journal",
-    tabSettings: "⚙️ Settings",
+    tabTracker: "Tracker",
+    tabSpending: "Living Expenses",
+    tabSavings: "Money Saved",
+    tabAdd: "Add New",
+    tabJournal: "Journal",
+    tabSettings: "Settings",
     totalSavedTitle: "Total Money Saved",
     totalSavedSubtitle: "Combined savings from all tracked habits",
     substancesTitle: "Tracked Habits",
@@ -118,8 +129,11 @@ const translations = {
     allEntriesTitle: "Recorded Journal Entries",
     noEntries: "No journal entries recorded yet.",
     settingsTitle: "Preferences & Settings",
-    settingsDesc: "Customize language, colors, and application data.",
+    settingsDesc: "Customize language, currency, and colors.",
     langLabel: "Language / Kieli",
+    currencyLabel: "Currency",
+    themeLabel: "Theme Color (Header)",
+    bgLabel: "Background Color",
     logoutBtn: "Log Out",
     confirmDelete: "Are you sure you want to remove this tracked habit?",
     setupWelcome: "Welcome to Sobriety Tracker",
@@ -128,7 +142,19 @@ const translations = {
     yourName: "Your Name",
     birthDate: "Date of Birth",
     firstSubstance: "First Habit or Substance",
-    startTrackingBtn: "Complete Setup"
+    startTrackingBtn: "Complete Setup",
+    themes: {
+      warmBrick: "Warm Brick",
+      sunset: "Sunset",
+      autumn: "Autumn Ruska",
+      peach: "Peach"
+    },
+    backgrounds: {
+      cream: "Cream",
+      warmSand: "Warm Sand",
+      softPeach: "Soft Peach",
+      lightCoffee: "Light Coffee"
+    }
   }
 }
 
@@ -140,12 +166,10 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString(userLocale, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-const formatMoney = (amount, lang) => {
+const formatMoney = (amount, currency) => {
   const formattedNum = Number(amount || 0).toFixed(2)
-  if (lang === 'en') {
-    return `€${formattedNum}`
-  }
-  return `${formattedNum} €`
+  const symbol = currency === 'USD' ? '$' : '€'
+  return `${formattedNum} ${symbol}`
 }
 
 function App() {
@@ -158,10 +182,11 @@ function App() {
 
   const [activeTab, setActiveTab] = useState('home')
   const [language, setLanguage] = useState('fi')
+  const [currency, setCurrency] = useState('EUR')
   const t = translations[language] || translations.fi
 
-  // TEEMAVÄRI-TILA (Oletuksena terracotta)
-  const [themeColor, setThemeColor] = useState('terracotta')
+  const [themeColor, setThemeColor] = useState('warmBrick')
+  const [bgThemeColor, setBgThemeColor] = useState('cream')
 
   const [isSetupComplete, setIsSetupComplete] = useState(false)
   const [username, setUsername] = useState('')
@@ -477,7 +502,7 @@ function App() {
 
   if (!session) {
     return (
-      <div className={`app-container theme-${themeColor}`}>
+      <div className={`app-container theme-${themeColor} bg-theme-${bgThemeColor}`}>
         <header className="header">
           <h1>Raittiusseuranta</h1>
           <p>Kirjaudu sisään tai luo tunnus hallitaksesi tietoja pilvessä.</p>
@@ -510,7 +535,7 @@ function App() {
               <button 
                 type="button" 
                 onClick={() => setIsRegistering(!isRegistering)}
-                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', width: '100%', fontSize: '0.9rem' }}
+                style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', width: '100%', fontSize: '0.9rem' }}
               >
                 {isRegistering ? 'Onko sinulla jo tili? Kirjaudu sisään' : 'Eikö sinulla ole tiliä? Rekisteröidy tästä'}
               </button>
@@ -523,7 +548,7 @@ function App() {
 
   if (!isSetupComplete) {
     return (
-      <div className={`app-container theme-${themeColor}`}>
+      <div className={`app-container theme-${themeColor} bg-theme-${bgThemeColor}`}>
         <header className="header">
           <h1>{t.setupWelcome}</h1>
           <p>{t.setupWelcomeDesc}</p>
@@ -565,18 +590,18 @@ function App() {
   const currentEditCosts = dailyLivingCosts[selectedEditDate] || { food: '', other: '' }
 
   return (
-    <div className={`app-container theme-${themeColor}`}>
+    <div className={`app-container theme-${themeColor} bg-theme-${bgThemeColor}`}>
       <header className="header">
         <h1>{t.headerTitle}</h1>
         <p>{t.headerGreeting} {username}! {t.headerSubtitle}</p>
         
-        <nav className="nav-menu">
-          <button style={{ backgroundColor: activeTab === 'home' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>{t.tabTracker}</button>
-          <button style={{ backgroundColor: activeTab === 'money' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('money')}>{t.tabSpending}</button>
-          <button style={{ backgroundColor: activeTab === 'savings' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('savings')}>{t.tabSavings}</button>
-          <button style={{ backgroundColor: activeTab === 'add' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('add')}>{t.tabAdd}</button>
-          <button style={{ backgroundColor: activeTab === 'journal' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('journal')}>{t.tabJournal}</button>
-          <button style={{ backgroundColor: activeTab === 'settings' ? 'rgba(255,255,255,0.3)' : 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setActiveTab('settings')}>{t.tabSettings}</button>
+        <nav className="nav-menu" style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '15px' }}>
+          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'home' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('home')}>{t.tabTracker}</button>
+          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'money' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('money')}>{t.tabSpending}</button>
+          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'savings' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('savings')}>{t.tabSavings}</button>
+          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'add' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('add')}>{t.tabAdd}</button>
+          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'journal' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('journal')}>{t.tabJournal}</button>
+          <button style={{ padding: '8px 10px', borderRadius: '20px', border: 'none', backgroundColor: activeTab === 'settings' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => setActiveTab('settings')}>{t.tabSettings}</button>
         </nav>
       </header>
 
@@ -586,27 +611,27 @@ function App() {
           <>
             <section className="card">
               <h2>{t.totalSavedTitle}</h2>
-              <div className="savings-amount">{formatMoney(totalSaved, language)}</div>
-              <p style={{ fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>{t.totalSavedSubtitle}</p>
+              <div className="savings-amount">{formatMoney(totalSaved, currency)}</div>
+              <p style={{ fontSize: '0.85rem', color: '#6c757d', textAlign: 'center' }}>{t.totalSavedSubtitle}</p>
             </section>
 
             <section className="card">
               <h2>{t.substancesTitle} ({trackerStats.length})</h2>
               {trackerStats.length === 0 ? (
-                <p style={{ color: '#64748b' }}>{t.noSubstances}</p>
+                <p style={{ color: '#868e96' }}>{t.noSubstances}</p>
               ) : (
                 trackerStats.map((item) => (
-                  <div key={item.id} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '16px' }}>
+                  <div key={item.id} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <h3 style={{ margin: '0 0 8px 0' }}>{item.name}</h3>
-                      <button onClick={() => handleDeleteSubstance(item.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}>{t.delete}</button>
+                      <button onClick={() => handleDeleteSubstance(item.id)} style={{ background: 'transparent', border: 'none', color: '#dc3545', cursor: 'pointer', fontSize: '0.85rem' }}>{t.delete}</button>
                     </div>
                     <div className="counter-grid">
                       <div className="counter-box"><div className="counter-number">{item.timePassed?.days || 0}</div><div className="counter-label">{t.days}</div></div>
                       <div className="counter-box"><div className="counter-number">{item.timePassed?.hours || 0}</div><div className="counter-label">{t.hours}</div></div>
                       <div className="counter-box"><div className="counter-number">{item.timePassed?.minutes || 0}</div><div className="counter-label">{t.minutes}</div></div>
                     </div>
-                    <div style={{ marginTop: '12px', fontSize: '0.9rem', color: '#475569' }}>{t.savedWithSubstance}: <strong>{formatMoney(item.savedMoney, language)}</strong></div>
+                    <div style={{ marginTop: '12px', fontSize: '0.9rem', color: '#495057' }}>{t.savedWithSubstance}: <strong>{formatMoney(item.savedMoney, currency)}</strong></div>
                   </div>
                 ))
               )}
@@ -617,26 +642,26 @@ function App() {
         {activeTab === 'money' && (
           <section className="card">
             <h2>{t.spendingTitle}</h2>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '16px' }}>{t.spendingDesc}</p>
-            <div className="form-group">
-              <label>{t.calcStartDateLabel}</label>
+            <p style={{ fontSize: '0.85rem', color: '#6c757d', marginBottom: '16px' }}>{t.spendingDesc}</p>
+            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '14px' }}>
+              <label style={{ fontWeight: 'bold' }}>{t.calcStartDateLabel}</label>
               <input type="date" value={moneyStartDate} max={todayStr} onChange={(e) => setMoneyStartDate(e.target.value)} />
             </div>
-            <div className="form-group">
-              <label>{t.editDateLabel}</label>
+            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '14px' }}>
+              <label style={{ fontWeight: 'bold' }}>{t.editDateLabel}</label>
               <input type="date" value={selectedEditDate} max={todayStr} onChange={(e) => setSelectedEditDate(e.target.value)} />
             </div>
-            <div className="form-group">
-              <label>{t.foodCostLabel} {formatDate(selectedEditDate)}</label>
+            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
+              <label style={{ fontWeight: 'bold' }}>{t.foodCostLabel} {formatDate(selectedEditDate)}</label>
               <input type="number" value={currentEditCosts.food} onChange={(e) => handleLivingCostChange(selectedEditDate, 'food', e.target.value)} />
             </div>
-            <div className="form-group">
-              <label>{t.otherCostLabel} {formatDate(selectedEditDate)}</label>
+            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
+              <label style={{ fontWeight: 'bold' }}>{t.otherCostLabel} {formatDate(selectedEditDate)}</label>
               <input type="number" value={currentEditCosts.other} onChange={(e) => handleLivingCostChange(selectedEditDate, 'other', e.target.value)} />
             </div>
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', textAlign: 'center', marginTop: '16px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 'bold' }}>{t.totalSpentRangeLabel}:</span>
-              <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--primary)', marginTop: '6px' }}>{formatMoney(totalLivingSpentRange, language)}</div>
+            <div style={{ background: '#eef2f7', padding: '16px', borderRadius: '8px', textAlign: 'center', marginTop: '16px' }}>
+              <span style={{ fontSize: '0.9rem', color: '#495057', fontWeight: 'bold' }}>{t.totalSpentRangeLabel}:</span>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: 'var(--primary-color)', marginTop: '6px' }}>{formatMoney(totalLivingSpentRange, currency)}</div>
             </div>
           </section>
         )}
@@ -644,22 +669,22 @@ function App() {
         {activeTab === 'savings' && (
           <section className="card">
             <h2>{t.savingsTitle}</h2>
-            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
+            <div style={{ background: 'var(--input-bg)', padding: '14px', borderRadius: '8px', marginBottom: '16px' }}>
               <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem' }}>{t.formerCostTitle}</h3>
               {substances.map((item) => (
                 <div key={item.id} className="form-group" style={{ marginBottom: '10px' }}>
-                  <label>{item.name} ({t.formerCostInputLabel})</label>
+                  <label style={{ fontWeight: 'bold' }}>{item.name} ({t.formerCostInputLabel})</label>
                   <input type="number" value={item.default_daily_cost} onChange={(e) => handleDefaultCostChange(item.id, e.target.value)} />
                 </div>
               ))}
             </div>
-            <div className="form-group">
-              <label>{t.calcSavingsStartLabel}</label>
+            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+              <label style={{ fontWeight: 'bold' }}>{t.calcSavingsStartLabel}</label>
               <input type="date" value={selectedSavingsDate} max={todayStr} onChange={(e) => setSelectedSavingsDate(e.target.value)} />
             </div>
-            <div style={{ background: '#ecfdf5', padding: '16px', borderRadius: '10px', textAlign: 'center', marginBottom: '16px', border: '1px solid #a7f3d0' }}>
-              <span style={{ fontSize: '0.9rem', color: '#047857', fontWeight: 'bold' }}>{t.savedFromDateLabel}:</span>
-              <div className="savings-amount" style={{ margin: '8px 0 0 0', color: '#059669', fontSize: '2.4rem' }}>{formatMoney(totalSavedFromSelectedDate, language)}</div>
+            <div style={{ background: '#eef9f1', padding: '16px', borderRadius: '8px', textAlign: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '0.9rem', color: '#155724', fontWeight: 'bold' }}>{t.savedFromDateLabel}:</span>
+              <div className="savings-amount" style={{ margin: '8px 0 0 0', color: '#2e7d32', fontSize: '2.4rem' }}>{formatMoney(totalSavedFromSelectedDate, currency)}</div>
             </div>
           </section>
         )}
@@ -688,32 +713,32 @@ function App() {
         {activeTab === 'journal' && (
           <section className="card">
             <h2>{t.journalTitle}</h2>
-            <div className="form-group">
-              <label>{t.selectJournalDateLabel}</label>
+            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '6px' }}>
+              <label style={{ fontWeight: 'bold' }}>{t.selectJournalDateLabel}</label>
               <input type="date" value={selectedJournalDate} max={todayStr} onChange={(e) => setSelectedJournalDate(e.target.value)} />
             </div>
             <form onSubmit={handleSaveJournalEntry} style={{ marginTop: '16px' }}>
               <div className="form-group">
-                <label>{t.journalEntryFor} {formatDate(selectedJournalDate)}{t.journalEntrySuffix}</label>
+                <label style={{ fontWeight: 'bold' }}>{t.journalEntryFor} {formatDate(selectedJournalDate)}{t.journalEntrySuffix}</label>
                 <textarea rows="4" value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder={t.journalPlaceholderToday} />
               </div>
               <button type="submit" className="btn-primary">{t.saveJournalBtn}</button>
             </form>
 
-            <div style={{ marginTop: '24px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+            <div style={{ marginTop: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
               <h3 style={{ fontSize: '1rem', marginBottom: '12px' }}>{t.allEntriesTitle}</h3>
               {Object.keys(journalMap).length === 0 ? (
-                <p style={{ color: '#64748b', fontSize: '0.9rem' }}>{t.noEntries}</p>
+                <p style={{ color: '#868e96', fontSize: '0.9rem' }}>{t.noEntries}</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {Object.entries(journalMap)
                     .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
                     .map(([date, content]) => (
-                      <div key={date} style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', borderLeft: '4px solid var(--primary)', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '4px' }}>
-                          📅 {formatDate(date)}
+                      <div key={date} style={{ background: 'var(--input-bg)', padding: '14px', borderRadius: '8px', borderLeft: '4px solid var(--primary-color)' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--primary-color)', marginBottom: '4px' }}>
+                          {formatDate(date)}
                         </div>
-                        <div style={{ fontSize: '0.95rem', color: '#334155', whiteSpace: 'pre-wrap' }}>
+                        <div style={{ fontSize: '0.95rem', color: '#333', whiteSpace: 'pre-wrap' }}>
                           {content}
                         </div>
                       </div>
@@ -728,87 +753,55 @@ function App() {
           <section className="card">
             <h2>{t.settingsTitle}</h2>
             
-            {/* KIELIVALINTA */}
+            {/* KIELI */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ fontWeight: 'bold', marginBottom: '8px' }}>🌐 {t.langLabel}</label>
+              <label style={{ fontWeight: 'bold', marginBottom: '8px' }}>{t.langLabel}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setLanguage('fi')} 
-                  style={{ 
-                    padding: '10px', 
-                    borderRadius: '8px', 
-                    background: language === 'fi' ? 'var(--primary)' : '#f8fafc', 
-                    color: language === 'fi' ? '#fff' : '#0f172a', 
-                    fontWeight: 'bold', 
-                    cursor: 'pointer', 
-                    border: '1px solid #cbd5e1' 
-                  }}
-                >
-                  🇫🇮 Suomi
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setLanguage('en')} 
-                  style={{ 
-                    padding: '10px', 
-                    borderRadius: '8px', 
-                    background: language === 'en' ? 'var(--primary)' : '#f8fafc', 
-                    color: language === 'en' ? '#fff' : '#0f172a', 
-                    fontWeight: 'bold', 
-                    cursor: 'pointer', 
-                    border: '1px solid #cbd5e1' 
-                  }}
-                >
-                  🇬🇧 English
-                </button>
+                <button type="button" onClick={() => setLanguage('fi')} style={{ padding: '10px', borderRadius: '8px', background: language === 'fi' ? '#333' : '#fff', color: language === 'fi' ? '#fff' : '#000', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #ccc' }}>Suomi</button>
+                <button type="button" onClick={() => setLanguage('en')} style={{ padding: '10px', borderRadius: '8px', background: language === 'en' ? '#333' : '#fff', color: language === 'en' ? '#fff' : '#000', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #ccc' }}>English</button>
               </div>
             </div>
 
-            <hr style={{ margin: '20px 0', borderColor: '#f1f5f9' }} />
+            <hr style={{ margin: '20px 0', borderColor: '#eee' }} />
 
-            {/* TEEMAVÄRIVILINTA */}
+            {/* VALUUTTA */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ fontWeight: 'bold', marginBottom: '8px' }}>🎨 Teemaväri</label>
+              <label style={{ fontWeight: 'bold', marginBottom: '8px' }}>{t.currencyLabel}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setThemeColor('terracotta')} 
-                  style={{ padding: '10px', borderRadius: '8px', background: '#c05621', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
-                >
-                  🟧 Terracotta
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setThemeColor('indigo')} 
-                  style={{ padding: '10px', borderRadius: '8px', background: '#4f46e5', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
-                >
-                  🟪 Moderni Indigo
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setThemeColor('forest')} 
-                  style={{ padding: '10px', borderRadius: '8px', background: '#059669', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
-                >
-                  🟩 Metsänvihreä
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setThemeColor('ocean')} 
-                  style={{ padding: '10px', borderRadius: '8px', background: '#0284c7', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}
-                >
-                  🟦 Merensininen
-                </button>
+                <button type="button" onClick={() => setCurrency('EUR')} style={{ padding: '10px', borderRadius: '8px', background: currency === 'EUR' ? '#333' : '#fff', color: currency === 'EUR' ? '#fff' : '#000', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #ccc' }}>Euro (€)</button>
+                <button type="button" onClick={() => setCurrency('USD')} style={{ padding: '10px', borderRadius: '8px', background: currency === 'USD' ? '#333' : '#fff', color: currency === 'USD' ? '#fff' : '#000', fontWeight: 'bold', cursor: 'pointer', border: '1px solid #ccc' }}>Dollar ($)</button>
               </div>
             </div>
 
-            <hr style={{ margin: '24px 0 16px 0', borderColor: '#f1f5f9' }} />
+            <hr style={{ margin: '20px 0', borderColor: '#eee' }} />
 
-            {/* ULOSKIRJAUTUMINEN */}
-            <button 
-              onClick={handleLogout} 
-              style={{ backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}
-            >
+            {/* TEEMAVÄRIT */}
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ fontWeight: 'bold', marginBottom: '8px' }}>{t.themeLabel}</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                <button type="button" onClick={() => setThemeColor('warmBrick')} style={{ padding: '10px', borderRadius: '8px', background: '#b94e3d', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}>{t.themes.warmBrick}</button>
+                <button type="button" onClick={() => setThemeColor('sunset')} style={{ padding: '10px', borderRadius: '8px', background: '#d97706', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}>{t.themes.sunset}</button>
+                <button type="button" onClick={() => setThemeColor('autumn')} style={{ padding: '10px', borderRadius: '8px', background: '#9a3412', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}>{t.themes.autumn}</button>
+                <button type="button" onClick={() => setThemeColor('peach')} style={{ padding: '10px', borderRadius: '8px', background: '#c2410c', color: '#fff', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}>{t.themes.peach}</button>
+              </div>
+            </div>
+
+            <hr style={{ margin: '20px 0', borderColor: '#eee' }} />
+
+            {/* TAUSTAVÄRIT */}
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ fontWeight: 'bold', marginBottom: '8px' }}>{t.bgLabel}</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                <button type="button" onClick={() => setBgThemeColor('cream')} style={{ padding: '10px', borderRadius: '8px', background: '#fdfbf7', color: '#333', fontWeight: 'bold', cursor: 'pointer', border: bgThemeColor === 'cream' ? '2px solid #333' : '1px solid #ccc' }}>{t.backgrounds.cream}</button>
+                <button type="button" onClick={() => setBgThemeColor('warmSand')} style={{ padding: '10px', borderRadius: '8px', background: '#f7f2eb', color: '#333', fontWeight: 'bold', cursor: 'pointer', border: bgThemeColor === 'warmSand' ? '2px solid #333' : '1px solid #ccc' }}>{t.backgrounds.warmSand}</button>
+                <button type="button" onClick={() => setBgThemeColor('softPeach')} style={{ padding: '10px', borderRadius: '8px', background: '#fbf5f0', color: '#333', fontWeight: 'bold', cursor: 'pointer', border: bgThemeColor === 'softPeach' ? '2px solid #333' : '1px solid #ccc' }}>{t.backgrounds.softPeach}</button>
+                <button type="button" onClick={() => setBgThemeColor('lightCoffee')} style={{ padding: '10px', borderRadius: '8px', background: '#f4ede4', color: '#333', fontWeight: 'bold', cursor: 'pointer', border: bgThemeColor === 'lightCoffee' ? '2px solid #333' : '1px solid #ccc' }}>{t.backgrounds.lightCoffee}</button>
+              </div>
+            </div>
+
+            <hr style={{ margin: '24px 0 16px 0' }} />
+
+            <button onClick={handleLogout} style={{ backgroundColor: '#dc3545', color: '#fff', border: 'none', padding: '12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>
               {t.logoutBtn}
             </button>
           </section>
