@@ -2,18 +2,36 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import './App.css'
 
+// ---------------------------------------------------------------------------
+// 1. SUPABASE-ALUSTUS
+// ---------------------------------------------------------------------------
 const SUPABASE_URL = 'https://gynvmhchddfdpzlychsf.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_O9hk82owcPxO-wCf1CbbYA_cPhXxnsW'
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
+// ---------------------------------------------------------------------------
+// 2. VAKIOKONTROLLIT JA KÄÄNNÖKSET
+// ---------------------------------------------------------------------------
+
+// Kuusi modernia, tarkkaan valittua teemaväriä yläpalkille
+const themeOptions = [
+  { id: 'indigo', color: '#6366f1', darker: '#4338ca' },
+  { id: 'emerald', color: '#059669', darker: '#047857' },
+  { id: 'coral', color: '#e11d48', darker: '#be123c' },
+  { id: 'violet', color: '#7c3aed', darker: '#6d28d9' },
+  { id: 'amber', color: '#d97706', darker: '#b45309' },
+  { id: 'cyan', color: '#0284c7', darker: '#0369a1' }
+]
+
+// Monikielisyystuki (Suomi ja Englanti)
 const translations = {
   fi: {
     headerTitle: "Raittiusseuranta",
     headerGreeting: "Hei",
     headerSubtitle: "Hienoa työtä kohti terveellisempää elämää.",
     tabTracker: "Seuranta",
-    tabSpending: "Arki",
+    tabSpending: "Menot",
     tabSavings: "Säästöt",
     tabAdd: "Uusi",
     tabJournal: "Päiväkirja",
@@ -50,7 +68,7 @@ const translations = {
     selectJournalDateLabel: "Valitse tarkasteltava tai muokattava päivä:",
     journalEntryFor: "Päivän",
     journalEntrySuffix: " merkintä:",
-    journalPlaceholderToday: "Miltä tänään tuntuu? Kirjoita ajatuksesi...",
+    journalPlaceholderToday: "Kirjoita päivän ajatuksesi ja fiiliksesi tähän...",
     saveJournalBtn: "Tallenna merkintä",
     allEntriesTitle: "Tallennetut merkinnät",
     noEntries: "Ei vielä tallennettuja päiväkirjamerkintöjä.",
@@ -127,7 +145,7 @@ const translations = {
     selectJournalDateLabel: "Select date to view or write:",
     journalEntryFor: "Journal entry for",
     journalEntrySuffix: ":",
-    journalPlaceholderToday: "How are you feeling today?",
+    journalPlaceholderToday: "Write your thoughts and feelings here...",
     saveJournalBtn: "Save Entry",
     allEntriesTitle: "Recorded Journal Entries",
     noEntries: "No journal entries recorded yet.",
@@ -164,6 +182,7 @@ const translations = {
   }
 }
 
+// Apufunktiot päivämäärien ja rahasummien muotoiluun
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   const [year, month, day] = dateStr.split('-').map(Number)
@@ -178,15 +197,9 @@ const formatMoney = (amount, currency) => {
   return `${formattedNum} ${symbol}`
 }
 
-const themeOptions = [
-  { id: 'indigo', color: '#6366f1', darker: '#4338ca' },
-  { id: 'emerald', color: '#059669', darker: '#047857' },
-  { id: 'coral', color: '#e11d48', darker: '#be123c' },
-  { id: 'violet', color: '#7c3aed', darker: '#6d28d9' },
-  { id: 'amber', color: '#d97706', darker: '#b45309' },
-  { id: 'cyan', color: '#0284c7', darker: '#0369a1' }
-]
-
+// ---------------------------------------------------------------------------
+// 3. PÄÄKOMPONENTTI: App
+// ---------------------------------------------------------------------------
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -218,6 +231,7 @@ function App() {
   const [selectedSavingsDate, setSelectedSavingsDate] = useState(todayStr)
   const [totalSavedFromSelectedDate, setTotalSavedFromSelectedDate] = useState(0)
 
+  // Päiväkirjaosion tilat (vain teksti)
   const [selectedJournalDate, setSelectedJournalDate] = useState(todayStr)
   const [journalMap, setJournalMap] = useState({})
   const [journalText, setJournalText] = useState('')
@@ -228,6 +242,10 @@ function App() {
   const [newSubstanceName, setNewSubstanceName] = useState('Alkoholi')
   const [newSoberDate, setNewSoberDate] = useState(todayStr)
   const [newDailyCost, setNewDailyCost] = useState('10')
+
+  // ---------------------------------------------------------------------------
+  // 4. EFEKTIT JA TIETOKANTAHAUT (SUPABASE)
+  // ---------------------------------------------------------------------------
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -272,16 +290,13 @@ function App() {
         .select('*')
         .eq('user_id', userId)
       
-      if (subs) {
-        setSubstances(subs)
-      } else {
-        setSubstances([])
-      }
+      setSubstances(subs || [])
 
       const { data: costs } = await supabase
         .from('daily_costs')
         .select('*')
         .eq('user_id', userId)
+
       if (costs) {
         const costMap = {}
         costs.forEach(c => { costMap[c.date] = { food: c.food, other: c.other } })
@@ -292,9 +307,12 @@ function App() {
         .from('journal_entries')
         .select('*')
         .eq('user_id', userId)
+
       if (journals) {
         const jMap = {}
-        journals.forEach(j => { jMap[j.date] = j.content })
+        journals.forEach(j => { 
+          jMap[j.date] = j.content 
+        })
         setJournalMap(jMap)
       }
     } catch (err) {
@@ -303,6 +321,10 @@ function App() {
       setLoading(false)
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // 5. TAPAHTUMANKÄSITTELIJÄT
+  // ---------------------------------------------------------------------------
 
   const handleAuth = async (e) => {
     e.preventDefault()
@@ -463,6 +485,10 @@ function App() {
     alert(`${t.journalEntryFor} ${formatDate(selectedJournalDate)} tallennettu!`)
   }
 
+  // ---------------------------------------------------------------------------
+  // 6. LASKENTALOGIIKKA
+  // ---------------------------------------------------------------------------
+
   useEffect(() => {
     if (!substances || substances.length === 0) {
       setTrackerStats([])
@@ -534,13 +560,17 @@ function App() {
     setJournalText(journalMap[selectedJournalDate] || '')
   }, [selectedJournalDate, journalMap])
 
+  // ---------------------------------------------------------------------------
+  // 7. RENDERÖINTI (UI)
+  // ---------------------------------------------------------------------------
+
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.2rem', fontFamily: 'Inter, sans-serif' }}>Ladataan...</div>
   }
 
   const containerClass = `app-container ${isDarkMode ? 'dark-mode' : ''}`
-
   const currentTheme = themeOptions.find(th => th.id === selectedThemeId) || themeOptions[0]
+
   const dynamicHeaderStyle = {
     background: `linear-gradient(135deg, ${currentTheme.color} 0%, ${currentTheme.darker} 100%)`,
     boxShadow: `0 15px 35px -10px ${currentTheme.color}66, 0 5px 15px rgba(0, 0, 0, 0.08)`
@@ -575,7 +605,7 @@ function App() {
                   required 
                 />
               </div>
-              <button type="submit" className="btn-primary" style={{ marginBottom: '16px' }}>
+              <button type="submit" className="btn-primary" style={{ marginBottom: '16px', backgroundColor: currentTheme.color }}>
                 {isRegistering ? 'Rekisteröidy' : 'Kirjaudu'}
               </button>
               <button 
@@ -625,7 +655,7 @@ function App() {
                 <label>{t.dailyCostBeforeLabel}</label>
                 <input type="number" value={newDailyCost} onChange={(e) => setNewDailyCost(e.target.value)} />
               </div>
-              <button type="submit" className="btn-primary">{t.startTrackingBtn}</button>
+              <button type="submit" className="btn-primary" style={{ backgroundColor: currentTheme.color }}>{t.startTrackingBtn}</button>
             </form>
           </section>
         </main>
@@ -763,10 +793,11 @@ function App() {
               <label style={{ fontWeight: '600' }}>{t.selectJournalDateLabel}</label>
               <input type="date" value={selectedJournalDate} max={todayStr} onChange={(e) => setSelectedJournalDate(e.target.value)} />
             </div>
+
             <form onSubmit={handleSaveJournalEntry} style={{ marginTop: '16px' }}>
               <div className="form-group">
                 <label style={{ fontWeight: '600' }}>{t.journalEntryFor} {formatDate(selectedJournalDate)}{t.journalEntrySuffix}</label>
-                <textarea rows="4" value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder={t.journalPlaceholderToday} />
+                <textarea rows="5" value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder={t.journalPlaceholderToday} />
               </div>
               <button type="submit" className="btn-primary" style={{ backgroundColor: currentTheme.color }}>{t.saveJournalBtn}</button>
             </form>
@@ -798,7 +829,6 @@ function App() {
           <section className="card">
             <h2>{t.settingsTitle}</h2>
             
-            {/* NIMEN MUOKKAUS */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ fontWeight: '600', marginBottom: '6px' }}>{t.nameChangeLabel}</label>
               <form onSubmit={handleUpdateName} style={{ display: 'flex', gap: '10px' }}>
@@ -817,7 +847,6 @@ function App() {
 
             <div className="divider"></div>
 
-            {/* KIELI */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ fontWeight: '600', marginBottom: '8px' }}>{t.langLabel}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
@@ -828,7 +857,6 @@ function App() {
 
             <div className="divider"></div>
 
-            {/* VALUUTTA */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ fontWeight: '600', marginBottom: '8px' }}>{t.currencyLabel}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
@@ -839,7 +867,6 @@ function App() {
 
             <div className="divider"></div>
 
-            {/* TUMMA TILA */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ fontWeight: '600', marginBottom: '8px' }}>{t.darkModeLabel}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
@@ -850,7 +877,6 @@ function App() {
 
             <div className="divider"></div>
 
-            {/* 6 MODERNIA TEOLLISUUSVÄRIÄ HEADERILLE */}
             <div className="form-group" style={{ marginBottom: '24px' }}>
               <label style={{ fontWeight: '600', marginBottom: '10px' }}>{t.themeLabel}</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
