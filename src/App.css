@@ -313,3 +313,49 @@ input:focus, textarea:focus {
   background-color: var(--border-color);
   margin: 24px 0;
 }
+/* 1. Korttien ja sivujen pehmeä esiintulo (Fade & Slide in) */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Kytketään animaatio kortteihin ja juhlabanneriin */
+.card {
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 2. Laskurin numeron pieni "syke" tai korostus */
+@keyframes pulseNumber {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.counter-number {
+  transition: transform 0.2s ease;
+}
+
+.counter-box:hover .counter-number {
+  animation: pulseNumber 0.4s ease-in-out;
+  color: var(--text-color);
+}
+
+/* 3. Napin painallusefekti kaikille painikkeille */
+button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+button:active {
+  transform: scale(0.96) !important;
+}
+
+/* 4. Tabin vaihdon pehmeä korostus */
+.nav-tab {
+  transition: all 0.25s ease !important;
+}
