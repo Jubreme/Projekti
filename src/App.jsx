@@ -14,7 +14,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 // 2. VAKIOKONTROLLIT JA KÄÄNNÖKSET
 // ---------------------------------------------------------------------------
 
-// Kuusi modernia, tarkkaan valittua teemaväriä yläpalkille
 const themeOptions = [
   { id: 'indigo', color: '#6366f1', darker: '#4338ca' },
   { id: 'emerald', color: '#059669', darker: '#047857' },
@@ -24,14 +23,13 @@ const themeOptions = [
   { id: 'cyan', color: '#0284c7', darker: '#0369a1' }
 ]
 
-// Monikielisyystuki (Suomi ja Englanti)
 const translations = {
   fi: {
     headerTitle: "Raittiusseuranta",
     headerGreeting: "Hei",
     headerSubtitle: "Hienoa työtä kohti terveellisempää elämää.",
     tabTracker: "Seuranta",
-    tabSpending: "Menot",
+    tabSpending: "Arki",
     tabSavings: "Säästöt",
     tabAdd: "Uusi",
     tabJournal: "Päiväkirja",
@@ -58,7 +56,6 @@ const translations = {
     formerCostInputLabel: "/ pvä",
     calcSavingsStartLabel: "Laske säästöt alkaen päivästä:",
     savedFromDateLabel: "Säästetty rahaa päihteistä",
-    allTimeSavingsLabel: "Kaikkien aikojen kokonaissäästöt:",
     addTitle: "Lisää uusi päihde tai tapa",
     substanceNameLabel: "Päihde / Tapa",
     soberDateLabel: "Raittiuden aloituspäivä",
@@ -78,10 +75,14 @@ const translations = {
     currencyLabel: "Valuutta",
     themeLabel: "Yläpalkin teemaväri",
     darkModeLabel: "Tumma tila (Dark Mode)",
+    notificationsLabel: "Mobiili-ilmoitukset",
+    enableNotificationsBtn: "🔔 Ota ilmoitukset käyttöön",
     nameChangeLabel: "Muokkaa nimeä",
     nameChangePlaceholder: "Kirjoita uusi nimi",
     saveNameBtn: "Tallenna nimi",
     logoutBtn: "Kirjaudu ulos",
+    deleteAccountBtn: "Poista tili pysyvästi",
+    confirmDeleteAccount: "Haluatko VARMASTI poistaa tilisi ja kaikki tietosi pysyvästi? Tätä toimintoa ei voi peruuttaa!",
     confirmDelete: "Haluatko varmasti poistaa tämän seurannan?",
     setupWelcome: "Tervetuloa Raittiusseurantaan",
     setupWelcomeDesc: "Aloitetaan syöttämällä perustietosi ja ensimmäinen seurattava kohde.",
@@ -90,10 +91,7 @@ const translations = {
     birthDate: "Syntymäaika",
     firstSubstance: "Ensimmäinen päihde / tapa",
     startTrackingBtn: "Jatka sovellukseen",
-    darkModeOptions: {
-      light: "Vaalea",
-      dark: "Tumma"
-    },
+    darkModeOptions: { light: "Vaalea", dark: "Tumma" },
     themeNames: {
       indigo: "Moderni Indigo",
       emerald: "Smaragdinvihreä",
@@ -135,7 +133,6 @@ const translations = {
     formerCostInputLabel: "/ day",
     calcSavingsStartLabel: "Calculate savings starting from:",
     savedFromDateLabel: "Money saved from habits",
-    allTimeSavingsLabel: "All-time savings since day one:",
     addTitle: "Add a New Habit or Substance",
     substanceNameLabel: "Habit / Substance Name",
     soberDateLabel: "Sobriety Start Date",
@@ -155,10 +152,14 @@ const translations = {
     currencyLabel: "Currency",
     themeLabel: "Header Theme Color",
     darkModeLabel: "Dark Mode",
+    notificationsLabel: "Mobile Notifications",
+    enableNotificationsBtn: "🔔 Enable Notifications",
     nameChangeLabel: "Edit Name",
     nameChangePlaceholder: "Enter new name",
     saveNameBtn: "Save Name",
     logoutBtn: "Log Out",
+    deleteAccountBtn: "Delete Account Permanently",
+    confirmDeleteAccount: "Are you SURE you want to delete your account and all your data permanently? This action cannot be undone!",
     confirmDelete: "Are you sure you want to remove this tracked habit?",
     setupWelcome: "Welcome to Sobriety Tracker",
     setupWelcomeDesc: "Let's set up your profile and your first goal.",
@@ -167,10 +168,7 @@ const translations = {
     birthDate: "Date of Birth",
     firstSubstance: "First Habit or Substance",
     startTrackingBtn: "Complete Setup",
-    darkModeOptions: {
-      light: "Light",
-      dark: "Dark"
-    },
+    darkModeOptions: { light: "Light", dark: "Dark" },
     themeNames: {
       indigo: "Modern Indigo",
       emerald: "Emerald Green",
@@ -182,7 +180,6 @@ const translations = {
   }
 }
 
-// Apufunktiot päivämäärien ja rahasummien muotoiluun
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   const [year, month, day] = dateStr.split('-').map(Number)
@@ -231,7 +228,6 @@ function App() {
   const [selectedSavingsDate, setSelectedSavingsDate] = useState(todayStr)
   const [totalSavedFromSelectedDate, setTotalSavedFromSelectedDate] = useState(0)
 
-  // Päiväkirjaosion tilat (vain teksti)
   const [selectedJournalDate, setSelectedJournalDate] = useState(todayStr)
   const [journalMap, setJournalMap] = useState({})
   const [journalText, setJournalText] = useState('')
@@ -310,9 +306,7 @@ function App() {
 
       if (journals) {
         const jMap = {}
-        journals.forEach(j => { 
-          jMap[j.date] = j.content 
-        })
+        journals.forEach(j => { jMap[j.date] = j.content })
         setJournalMap(jMap)
       }
     } catch (err) {
@@ -323,7 +317,31 @@ function App() {
   }
 
   // ---------------------------------------------------------------------------
-  // 5. TAPAHTUMANKÄSITTELIJÄT
+  // 5. MOBIILI-ILMOITUSTEN AKTIVOINTI (NOTIFICATION API)
+  // ---------------------------------------------------------------------------
+  const enableMobileNotifications = async () => {
+    if (!('Notification' in window)) {
+      alert('Selaimesi ei tue ilmoituksia.')
+      return
+    }
+
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission === 'granted') {
+        alert(language === 'en' ? 'Notifications enabled successfully!' : 'Ilmoitukset otettu käyttöön!')
+        new Notification('Raittiusseuranta 🎉', {
+          body: language === 'en' ? 'Notifications are now active.' : 'Ilmoitukset ovat nyt päällä.'
+        })
+      } else {
+        alert(language === 'en' ? 'Permission denied.' : 'Ilmoituslupa hylättiin.')
+      }
+    } catch (err) {
+      console.error('Virhe ilmoitusluvan pyynnössä:', err)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 6. TAPAHTUMANKÄSITTELIJÄT (AUTH, DATA, TILIN POISTO)
   // ---------------------------------------------------------------------------
 
   const handleAuth = async (e) => {
@@ -342,6 +360,27 @@ function App() {
     await supabase.auth.signOut()
     setSession(null)
     setIsSetupComplete(false)
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm(t.confirmDeleteAccount)) return
+
+    try {
+      const userId = session.user.id
+
+      await supabase.from('substances').delete().eq('user_id', userId)
+      await supabase.from('daily_costs').delete().eq('user_id', userId)
+      await supabase.from('journal_entries').delete().eq('user_id', userId)
+      await supabase.from('profiles').delete().eq('id', userId)
+
+      await supabase.auth.signOut()
+      setSession(null)
+      setIsSetupComplete(false)
+      alert(language === 'en' ? 'Account deleted successfully.' : 'Tili poistettu onnistuneesti.')
+    } catch (err) {
+      console.error('Virhe tilin poistossa:', err)
+      alert('Tilin poistaminen epäonnistui: ' + err.message)
+    }
   }
 
   const handleSetupSubmit = async (e) => {
@@ -486,7 +525,7 @@ function App() {
   }
 
   // ---------------------------------------------------------------------------
-  // 6. LASKENTALOGIIKKA
+  // 7. LASKENTALOGIIKKA
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
@@ -561,7 +600,7 @@ function App() {
   }, [selectedJournalDate, journalMap])
 
   // ---------------------------------------------------------------------------
-  // 7. RENDERÖINTI (UI)
+  // 8. RENDERÖINTI (UI)
   // ---------------------------------------------------------------------------
 
   if (loading) {
@@ -605,6 +644,7 @@ function App() {
                   required 
                 />
               </div>
+
               <button type="submit" className="btn-primary" style={{ marginBottom: '16px', backgroundColor: currentTheme.color }}>
                 {isRegistering ? 'Rekisteröidy' : 'Kirjaudu'}
               </button>
@@ -683,6 +723,7 @@ function App() {
 
       <main className="main-content" style={{ marginTop: '24px' }}>
         
+        {/* SEURANTA - TAB */}
         {activeTab === 'home' && (
           <>
             <section className="card">
@@ -702,12 +743,16 @@ function App() {
                       <h3 style={{ margin: '0', color: 'var(--text-color)', fontSize: '1.05rem', fontWeight: '600' }}>{item.name}</h3>
                       <button onClick={() => handleDeleteSubstance(item.id)} className="btn-delete-sub">{t.delete}</button>
                     </div>
+
                     <div className="counter-grid">
                       <div className="counter-box"><div className="counter-number">{item.timePassed?.days || 0}</div><div className="counter-label">{t.days}</div></div>
                       <div className="counter-box"><div className="counter-number">{item.timePassed?.hours || 0}</div><div className="counter-label">{t.hours}</div></div>
                       <div className="counter-box"><div className="counter-number">{item.timePassed?.minutes || 0}</div><div className="counter-label">{t.minutes}</div></div>
                     </div>
-                    <div style={{ marginTop: '14px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t.savedWithSubstance}: <strong style={{ color: 'var(--text-color)' }}>{formatMoney(item.savedMoney, currency)}</strong></div>
+
+                    <div style={{ marginTop: '14px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                      {t.savedWithSubstance}: <strong style={{ color: 'var(--text-color)' }}>{formatMoney(item.savedMoney, currency)}</strong>
+                    </div>
                   </div>
                 ))
               )}
@@ -715,6 +760,7 @@ function App() {
           </>
         )}
 
+        {/* ARKI - TAB */}
         {activeTab === 'money' && (
           <section className="card">
             <h2>{t.spendingTitle}</h2>
@@ -742,6 +788,7 @@ function App() {
           </section>
         )}
 
+        {/* SÄÄSTÖT - TAB */}
         {activeTab === 'savings' && (
           <section className="card">
             <h2>{t.savingsTitle}</h2>
@@ -765,6 +812,7 @@ function App() {
           </section>
         )}
 
+        {/* UUSI - TAB */}
         {activeTab === 'add' && (
           <section className="card">
             <h2>{t.addTitle}</h2>
@@ -786,6 +834,7 @@ function App() {
           </section>
         )}
 
+        {/* PÄIVÄKIRJA - TAB */}
         {activeTab === 'journal' && (
           <section className="card">
             <h2>{t.journalTitle}</h2>
@@ -825,6 +874,7 @@ function App() {
           </section>
         )}
 
+        {/* ASETUKSET - TAB */}
         {activeTab === 'settings' && (
           <section className="card">
             <h2>{t.settingsTitle}</h2>
@@ -832,17 +882,20 @@ function App() {
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ fontWeight: '600', marginBottom: '6px' }}>{t.nameChangeLabel}</label>
               <form onSubmit={handleUpdateName} style={{ display: 'flex', gap: '10px' }}>
-                <input 
-                  type="text" 
-                  value={tempUsername} 
-                  onChange={(e) => setTempUsername(e.target.value)} 
-                  placeholder={t.nameChangePlaceholder} 
-                  required 
-                />
+                <input type="text" value={tempUsername} onChange={(e) => setTempUsername(e.target.value)} placeholder={t.nameChangePlaceholder} required />
                 <button type="submit" className="btn-primary" style={{ backgroundColor: currentTheme.color, width: 'auto', padding: '12px 20px', whiteSpace: 'nowrap' }}>
                   {t.saveNameBtn}
                 </button>
               </form>
+            </div>
+
+            <div className="divider"></div>
+
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ fontWeight: '600', marginBottom: '8px' }}>{t.notificationsLabel}</label>
+              <button type="button" onClick={enableMobileNotifications} className="btn-primary" style={{ backgroundColor: currentTheme.color }}>
+                {t.enableNotificationsBtn}
+              </button>
             </div>
 
             <div className="divider"></div>
@@ -906,9 +959,30 @@ function App() {
               </div>
             </div>
 
-            <button onClick={handleLogout} className="btn-logout">
-              {t.logoutBtn}
-            </button>
+            <div className="divider"></div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button onClick={handleLogout} className="btn-logout">
+                {t.logoutBtn}
+              </button>
+
+              <button 
+                onClick={handleDeleteAccount} 
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#ef4444',
+                  border: '1px dashed #ef4444',
+                  padding: '12px',
+                  borderRadius: '14px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.9rem',
+                  transition: 'background 0.2s'
+                }}
+              >
+                {t.deleteAccountBtn}
+              </button>
+            </div>
           </section>
         )}
 
