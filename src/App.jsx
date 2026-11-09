@@ -33,6 +33,7 @@ const translations = {
     tabSavings: "Säästöt",
     tabAdd: "Uusi",
     tabJournal: "Päiväkirja",
+    tabLinks: "Linkit",
     tabSettings: "Asetukset",
     totalSavedTitle: "Yhteenlasketut säästöt",
     totalSavedSubtitle: "Yhteensä kaikista seurattavista kohteista",
@@ -51,11 +52,10 @@ const translations = {
     otherCostLabel: "Muut arjen menot päivälle",
     totalSpentRangeLabel: "Käytetty rahaa yhteensä",
     savingsTitle: "Säästetty raha päihteistä",
-    formerCostTitle: "Aseta entinen päihdekulutus",
-    formerCostDesc: "Paljonko ennen käytit keskimäärin rahaa päivässä kuhunkin päihteeseen?",
+    formerCostTitle: "Päihteiden asetukset",
+    formerCostDesc: "Muokkaa kunkin päihteen aloituspäivää ja päivittäistä entistä kulutusta.",
     formerCostInputLabel: "/ pvä",
-    calcSavingsStartLabel: "Laske säästöt alkaen päivästä:",
-    savedFromDateLabel: "Säästetty rahaa päihteistä",
+    savedFromDateLabel: "Säästetty rahaa päihteistä yhteensä",
     addTitle: "Lisää uusi päihde tai tapa",
     substanceNameLabel: "Päihde / Tapa",
     soberDateLabel: "Raittiuden aloituspäivä",
@@ -69,6 +69,8 @@ const translations = {
     saveJournalBtn: "Tallenna merkintä",
     allEntriesTitle: "Tallennetut merkinnät",
     noEntries: "Ei vielä tallennettuja päiväkirjamerkintöjä.",
+    linksTitle: "Hyödylliset linkit ja tuki",
+    linksDesc: "Täältä löydät tukea, kokouksia ja materiaaleja toipumisen tueksi.",
     settingsTitle: "Asetukset",
     settingsDesc: "Mukauta sovelluksen ulkoasua, kieltä ja yläpalkin teemaväriä.",
     langLabel: "Kieli / Language",
@@ -91,15 +93,7 @@ const translations = {
     birthDate: "Syntymäaika",
     firstSubstance: "Ensimmäinen päihde / tapa",
     startTrackingBtn: "Jatka sovellukseen",
-    darkModeOptions: { light: "Vaalea", dark: "Tumma" },
-    themeNames: {
-      indigo: "Moderni Indigo",
-      emerald: "Smaragdinvihreä",
-      coral: "Syvä Koralli",
-      violet: "Hämärän Violetti",
-      amber: "Auringonlaskun Kulta",
-      cyan: "Pohjoisen Syaani"
-    }
+    darkModeOptions: { light: "Vaalea", dark: "Tumma" }
   },
   en: {
     headerTitle: "Sobriety Tracker",
@@ -110,6 +104,7 @@ const translations = {
     tabSavings: "Savings",
     tabAdd: "New",
     tabJournal: "Journal",
+    tabLinks: "Links",
     tabSettings: "Settings",
     totalSavedTitle: "Total Money Saved",
     totalSavedSubtitle: "Combined savings from all tracked habits",
@@ -128,11 +123,10 @@ const translations = {
     otherCostLabel: "Other Living Expenses for",
     totalSpentRangeLabel: "Total living expenses spent",
     savingsTitle: "Savings from Sobriety",
-    formerCostTitle: "Previous Daily Cost",
-    formerCostDesc: "How much did you spend daily on each habit on average?",
+    formerCostTitle: "Substance Settings",
+    formerCostDesc: "Edit start date and previous daily expenditure for each habit.",
     formerCostInputLabel: "/ day",
-    calcSavingsStartLabel: "Calculate savings starting from:",
-    savedFromDateLabel: "Money saved from habits",
+    savedFromDateLabel: "Total money saved from habits",
     addTitle: "Add a New Habit or Substance",
     substanceNameLabel: "Habit / Substance Name",
     soberDateLabel: "Sobriety Start Date",
@@ -146,6 +140,8 @@ const translations = {
     saveJournalBtn: "Save Entry",
     allEntriesTitle: "Recorded Journal Entries",
     noEntries: "No journal entries recorded yet.",
+    linksTitle: "Useful Links & Support",
+    linksDesc: "Find resources, meeting directories, and support networks to aid your recovery.",
     settingsTitle: "Preferences & Settings",
     settingsDesc: "Customize language, currency, and header theme color.",
     langLabel: "Language / Kieli",
@@ -168,15 +164,7 @@ const translations = {
     birthDate: "Date of Birth",
     firstSubstance: "First Habit or Substance",
     startTrackingBtn: "Complete Setup",
-    darkModeOptions: { light: "Light", dark: "Dark" },
-    themeNames: {
-      indigo: "Modern Indigo",
-      emerald: "Emerald Green",
-      coral: "Deep Coral",
-      violet: "Twilight Violet",
-      amber: "Sunset Amber",
-      cyan: "Nordic Cyan"
-    }
+    darkModeOptions: { light: "Light", dark: "Dark" }
   }
 }
 
@@ -224,9 +212,6 @@ function App() {
   const [selectedEditDate, setSelectedEditDate] = useState(todayStr)
   const [dailyLivingCosts, setDailyLivingCosts] = useState({})
   const [totalLivingSpentRange, setTotalLivingSpentRange] = useState(0)
-
-  const [selectedSavingsDate, setSelectedSavingsDate] = useState(todayStr)
-  const [totalSavedFromSelectedDate, setTotalSavedFromSelectedDate] = useState(0)
 
   const [selectedJournalDate, setSelectedJournalDate] = useState(todayStr)
   const [journalMap, setJournalMap] = useState({})
@@ -489,6 +474,11 @@ function App() {
     setSubstances(substances.map(item => item.id === id ? { ...item, default_daily_cost: costVal } : item))
   }
 
+  const handleSoberDateChange = async (id, newDate) => {
+    await supabase.from('substances').update({ sober_date: newDate }).eq('id', id)
+    setSubstances(substances.map(item => item.id === id ? { ...item, sober_date: newDate } : item))
+  }
+
   const handleLivingCostChange = async (dateStr, category, amount) => {
     const val = amount === '' ? 0 : parseFloat(amount) || 0
     const currentDayCosts = dailyLivingCosts[dateStr] || { food: 0, other: 0 }
@@ -532,7 +522,6 @@ function App() {
     if (!substances || substances.length === 0) {
       setTrackerStats([])
       setTotalSaved(0)
-      setTotalSavedFromSelectedDate(0)
       return
     }
 
@@ -561,18 +550,7 @@ function App() {
 
     setTrackerStats(updatedStats)
     setTotalSaved(overallMoney)
-
-    let savedMoneySum = 0
-    const sStartDate = new Date(selectedSavingsDate)
-    let sIterDate = new Date(sStartDate.getFullYear(), sStartDate.getMonth(), sStartDate.getDate())
-    const sFinalDate = new Date()
-
-    while (sIterDate <= sFinalDate) {
-      substances.forEach((sub) => { savedMoneySum += (sub.default_daily_cost || 0) })
-      sIterDate.setDate(sIterDate.getDate() + 1)
-    }
-    setTotalSavedFromSelectedDate(savedMoneySum)
-  }, [substances, selectedSavingsDate])
+  }, [substances])
 
   useEffect(() => {
     let sum = 0
@@ -717,6 +695,7 @@ function App() {
           <button className={`nav-tab ${activeTab === 'savings' ? 'active' : ''}`} onClick={() => setActiveTab('savings')}>{t.tabSavings}</button>
           <button className={`nav-tab ${activeTab === 'add' ? 'active' : ''}`} onClick={() => setActiveTab('add')}>{t.tabAdd}</button>
           <button className={`nav-tab ${activeTab === 'journal' ? 'active' : ''}`} onClick={() => setActiveTab('journal')}>{t.tabJournal}</button>
+          <button className={`nav-tab ${activeTab === 'links' ? 'active' : ''}`} onClick={() => setActiveTab('links')}>{t.tabLinks}</button>
           <button className={`nav-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>{t.tabSettings}</button>
         </nav>
       </header>
@@ -781,33 +760,55 @@ function App() {
               <label style={{ fontWeight: '600' }}>{t.otherCostLabel} {formatDate(selectedEditDate)}</label>
               <input type="number" value={currentEditCosts.other} onChange={(e) => handleLivingCostChange(selectedEditDate, 'other', e.target.value)} />
             </div>
-            <div className="card-total-box" style={{ padding: '20px', borderRadius: '16px', textAlign: 'center', marginTop: '16px' }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)' }}>{t.totalSpentRangeLabel}:</span>
-              <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-color)', marginTop: '4px' }}>{formatMoney(totalLivingSpentRange, currency)}</div>
+            <div className="card-total-box" style={{ padding: '20px', borderRadius: '14px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{t.totalSpentRangeLabel} ({formatDate(moneyStartDate)} – {formatDate(todayStr)})</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: '700', color: currentTheme.color }}>{formatMoney(totalLivingSpentRange, currency)}</div>
             </div>
           </section>
         )}
 
-        {/* SÄÄSTÖT - TAB */}
+        {/* SÄÄSTÖT - TAB (KOHTEISEN ALOITUSPÄIVÄ JA KULUTUS) */}
         {activeTab === 'savings' && (
           <section className="card">
             <h2>{t.savingsTitle}</h2>
-            <div style={{ background: 'var(--input-bg)', padding: '16px', borderRadius: '14px', marginBottom: '16px' }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: 'var(--text-color)', fontWeight: '600' }}>{t.formerCostTitle}</h3>
-              {substances.map((item) => (
-                <div key={item.id} className="form-group" style={{ marginBottom: '10px' }}>
-                  <label style={{ fontWeight: '600' }}>{item.name} ({t.formerCostInputLabel})</label>
-                  <input type="number" value={item.default_daily_cost} onChange={(e) => handleDefaultCostChange(item.id, e.target.value)} />
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>{t.formerCostDesc}</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '16px' }}>
+              {substances.map(sub => (
+                <div key={sub.id} style={{ background: 'var(--input-bg)', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '12px', color: currentTheme.color }}>
+                    {sub.name}
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '10px' }}>
+                    <label style={{ fontSize: '0.85rem' }}>{t.soberDateLabel}:</label>
+                    <input 
+                      type="date" 
+                      value={sub.sober_date} 
+                      max={todayStr} 
+                      onChange={(e) => handleSoberDateChange(sub.id, e.target.value)} 
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '0' }}>
+                    <label style={{ fontSize: '0.85rem' }}>Päivittäinen entinen kulu ({currency}):</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input 
+                        type="number" 
+                        value={sub.default_daily_cost} 
+                        onChange={(e) => handleDefaultCostChange(sub.id, e.target.value)} 
+                        style={{ flex: 1 }} 
+                      />
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t.formerCostInputLabel}</span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '14px', borderRadius: '14px', marginBottom: '16px' }}>
-              <label style={{ fontWeight: '600' }}>{t.calcSavingsStartLabel}</label>
-              <input type="date" value={selectedSavingsDate} max={todayStr} onChange={(e) => setSelectedSavingsDate(e.target.value)} />
-            </div>
-            <div className="card-savings-box" style={{ padding: '20px', borderRadius: '16px', textAlign: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)' }}>{t.savedFromDateLabel}:</span>
-              <div className="savings-amount" style={{ margin: '8px 0 0 0', fontSize: '2.4rem', color: currentTheme.color }}>{formatMoney(totalSavedFromSelectedDate, currency)}</div>
+
+            <div className="card-total-box" style={{ padding: '20px', borderRadius: '14px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', textAlign: 'center', marginTop: '24px' }}>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{t.savedFromDateLabel}</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: '700', color: currentTheme.color }}>{formatMoney(totalSaved, currency)}</div>
             </div>
           </section>
         )}
@@ -819,17 +820,17 @@ function App() {
             <form onSubmit={handleAddSubstance}>
               <div className="form-group">
                 <label>{t.substanceNameLabel}</label>
-                <input type="text" value={newSubstanceName} onChange={(e) => setNewSubstanceName(e.target.value)} required />
+                <input type="text" value={newSubstanceName} onChange={(e) => setNewSubstanceName(e.target.value)} placeholder="Esim. Tupakka" required />
               </div>
               <div className="form-group">
                 <label>{t.soberDateLabel}</label>
-                <input type="date" value={newSoberDate} onChange={(e) => setNewSoberDate(e.target.value)} required />
+                <input type="date" value={newSoberDate} max={todayStr} onChange={(e) => setNewSoberDate(e.target.value)} required />
               </div>
               <div className="form-group">
                 <label>{t.dailyCostBeforeLabel}</label>
                 <input type="number" value={newDailyCost} onChange={(e) => setNewDailyCost(e.target.value)} />
               </div>
-              <button type="submit" className="btn-primary" style={{ backgroundColor: currentTheme.color, marginTop: '8px' }}>{t.addBtn}</button>
+              <button type="submit" className="btn-primary" style={{ backgroundColor: currentTheme.color }}>{t.addBtn}</button>
             </form>
           </section>
         )}
@@ -838,39 +839,89 @@ function App() {
         {activeTab === 'journal' && (
           <section className="card">
             <h2>{t.journalTitle}</h2>
-            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '14px', borderRadius: '14px' }}>
+            <div className="form-group" style={{ background: 'var(--input-bg)', padding: '14px', borderRadius: '14px', marginBottom: '14px' }}>
               <label style={{ fontWeight: '600' }}>{t.selectJournalDateLabel}</label>
               <input type="date" value={selectedJournalDate} max={todayStr} onChange={(e) => setSelectedJournalDate(e.target.value)} />
             </div>
-
-            <form onSubmit={handleSaveJournalEntry} style={{ marginTop: '16px' }}>
+            <form onSubmit={handleSaveJournalEntry}>
               <div className="form-group">
                 <label style={{ fontWeight: '600' }}>{t.journalEntryFor} {formatDate(selectedJournalDate)}{t.journalEntrySuffix}</label>
-                <textarea rows="5" value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder={t.journalPlaceholderToday} />
+                <textarea 
+                  rows="5" 
+                  value={journalText} 
+                  onChange={(e) => setJournalText(e.target.value)} 
+                  placeholder={t.journalPlaceholderToday}
+                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--input-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)', resize: 'vertical' }}
+                />
               </div>
               <button type="submit" className="btn-primary" style={{ backgroundColor: currentTheme.color }}>{t.saveJournalBtn}</button>
             </form>
+            <div style={{ marginTop: '24px' }}>
+              <h3 style={{ fontSize: '1.05rem', marginBottom: '12px' }}>{t.allEntriesTitle}</h3>
+              {Object.keys(journalMap).length === 0 ? (
+                <p style={{ color: 'var(--text-muted)' }}>{t.noEntries}</p>
+              ) : (
+                Object.entries(journalMap).sort().reverse().map(([date, content]) => (
+                  <div key={date} style={{ background: 'var(--input-bg)', padding: '14px', borderRadius: '12px', marginBottom: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontWeight: '600', fontSize: '0.9rem', color: currentTheme.color, marginBottom: '6px' }}>{formatDate(date)}</div>
+                    <div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{content}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        )}
 
-            <div className="divider"></div>
-            <h3 style={{ fontSize: '1.05rem', marginBottom: '14px', color: 'var(--text-color)', fontWeight: '600' }}>{t.allEntriesTitle}</h3>
-            {Object.keys(journalMap).length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{t.noEntries}</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {Object.entries(journalMap)
-                  .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
-                  .map(([date, content]) => (
-                    <div key={date} className="journal-entry-card" style={{ borderLeftColor: currentTheme.color }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '700', color: currentTheme.color, marginBottom: '4px' }}>
-                        {formatDate(date)}
-                      </div>
-                      <div style={{ fontSize: '0.95rem', color: 'var(--text-color)', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
-                        {content}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
+        {/* LINKIT - TAB */}
+        {activeTab === 'links' && (
+          <section className="card">
+            <h2>{t.linksTitle}</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>{t.linksDesc}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <a
+                href="https://alcoholics-anonymous.eu/meetings"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--input-bg)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-color)',
+                  textDecoration: 'none'
+                }}
+              >
+                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '6px', color: currentTheme.color }}>
+                  Alcoholics Anonymous (AA) Meetings ↗
+                </div>
+                <div style={{ fontSize: '0.9rem', opacity: 0.85, lineHeight: '1.4' }}>
+                  Löydä lähimmät AA-kokoukset ja vertaistukiryhmät alkoholismista toipumiseen.
+                </div>
+              </a>
+
+              <a
+                href="https://na.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--input-bg)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-color)',
+                  textDecoration: 'none'
+                }}
+              >
+                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '6px', color: currentTheme.color }}>
+                  Narcotics Anonymous (NA) ↗
+                </div>
+                <div style={{ fontSize: '0.9rem', opacity: 0.85, lineHeight: '1.4' }}>
+                  Kansainvälinen vertaistukiverkosto ja materiaalit toipumisen tueksi.
+                </div>
+              </a>
+            </div>
           </section>
         )}
 
@@ -878,114 +929,137 @@ function App() {
         {activeTab === 'settings' && (
           <section className="card">
             <h2>{t.settingsTitle}</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>{t.settingsDesc}</p>
             
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ fontWeight: '600', marginBottom: '6px' }}>{t.nameChangeLabel}</label>
+              <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>{t.nameChangeLabel}</label>
               <form onSubmit={handleUpdateName} style={{ display: 'flex', gap: '10px' }}>
-                <input type="text" value={tempUsername} onChange={(e) => setTempUsername(e.target.value)} placeholder={t.nameChangePlaceholder} required />
-                <button type="submit" className="btn-primary" style={{ backgroundColor: currentTheme.color, width: 'auto', padding: '12px 20px', whiteSpace: 'nowrap' }}>
+                <input 
+                  type="text" 
+                  value={tempUsername} 
+                  onChange={(e) => setTempUsername(e.target.value)} 
+                  placeholder={t.nameChangePlaceholder}
+                  style={{ flex: 1 }}
+                  required 
+                />
+                <button type="submit" className="btn-primary" style={{ width: 'auto', padding: '10px 16px', backgroundColor: currentTheme.color, margin: 0 }}>
                   {t.saveNameBtn}
                 </button>
               </form>
             </div>
 
-            <div className="divider"></div>
-
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ fontWeight: '600', marginBottom: '8px' }}>{t.notificationsLabel}</label>
-              <button type="button" onClick={enableMobileNotifications} className="btn-primary" style={{ backgroundColor: currentTheme.color }}>
-                {t.enableNotificationsBtn}
-              </button>
-            </div>
-
-            <div className="divider"></div>
-
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ fontWeight: '600', marginBottom: '8px' }}>{t.langLabel}</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                <button type="button" onClick={() => setLanguage('fi')} className={`setting-toggle-btn ${language === 'fi' ? 'active' : ''}`}>Suomi</button>
-                <button type="button" onClick={() => setLanguage('en')} className={`setting-toggle-btn ${language === 'en' ? 'active' : ''}`}>English</button>
+              <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>{t.langLabel}</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={async () => {
+                    setLanguage('fi')
+                    await supabase.from('profiles').upsert({ id: session.user.id, username, birth_date: birthDate, language: 'fi' })
+                  }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', backgroundColor: language === 'fi' ? currentTheme.color : 'var(--input-bg)', color: language === 'fi' ? '#fff' : 'var(--text-color)', border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  Suomi
+                </button>
+                <button 
+                  type="button" 
+                  onClick={async () => {
+                    setLanguage('en')
+                    await supabase.from('profiles').upsert({ id: session.user.id, username, birth_date: birthDate, language: 'en' })
+                  }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', backgroundColor: language === 'en' ? currentTheme.color : 'var(--input-bg)', color: language === 'en' ? '#fff' : 'var(--text-color)', border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  English
+                </button>
               </div>
             </div>
 
-            <div className="divider"></div>
-
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ fontWeight: '600', marginBottom: '8px' }}>{t.currencyLabel}</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                <button type="button" onClick={() => setCurrency('EUR')} className={`setting-toggle-btn ${currency === 'EUR' ? 'active' : ''}`}>Euro (€)</button>
-                <button type="button" onClick={() => setCurrency('USD')} className={`setting-toggle-btn ${currency === 'USD' ? 'active' : ''}`}>Dollar ($)</button>
+              <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>{t.currencyLabel}</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setCurrency('EUR')}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', backgroundColor: currency === 'EUR' ? currentTheme.color : 'var(--input-bg)', color: currency === 'EUR' ? '#fff' : 'var(--text-color)', border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  EUR (€)
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setCurrency('USD')}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', backgroundColor: currency === 'USD' ? currentTheme.color : 'var(--input-bg)', color: currency === 'USD' ? '#fff' : 'var(--text-color)', border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  USD ($)
+                </button>
               </div>
             </div>
 
-            <div className="divider"></div>
-
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ fontWeight: '600', marginBottom: '8px' }}>{t.darkModeLabel}</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                <button type="button" onClick={() => setIsDarkMode(false)} className={`setting-toggle-btn ${!isDarkMode ? 'active' : ''}`}>{t.darkModeOptions.light}</button>
-                <button type="button" onClick={() => setIsDarkMode(true)} className={`setting-toggle-btn ${isDarkMode ? 'active' : ''}`}>{t.darkModeOptions.dark}</button>
+              <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>{t.darkModeLabel}</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setIsDarkMode(false)}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', backgroundColor: !isDarkMode ? currentTheme.color : 'var(--input-bg)', color: !isDarkMode ? '#fff' : 'var(--text-color)', border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  {t.darkModeOptions.light}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setIsDarkMode(true)}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', backgroundColor: isDarkMode ? currentTheme.color : 'var(--input-bg)', color: isDarkMode ? '#fff' : 'var(--text-color)', border: '1px solid var(--border-color)', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  {t.darkModeOptions.dark}
+                </button>
               </div>
             </div>
-
-            <div className="divider"></div>
 
             <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label style={{ fontWeight: '600', marginBottom: '10px' }}>{t.themeLabel}</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                {themeOptions.map((item) => (
+              <label style={{ fontWeight: '600', display: 'block', marginBottom: '10px' }}>{t.themeLabel}</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                {themeOptions.map((th) => (
                   <button
-                    key={item.id}
+                    key={th.id}
                     type="button"
-                    onClick={() => setSelectedThemeId(item.id)}
+                    onClick={() => setSelectedThemeId(th.id)}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '12px 14px',
+                      height: '48px',
                       borderRadius: '14px',
-                      border: selectedThemeId === item.id ? `2px solid var(--text-color)` : '1px solid var(--border-color)',
-                      background: 'var(--input-bg)',
+                      backgroundColor: th.color,
+                      border: selectedThemeId === th.id ? '3px solid var(--text-color)' : '2px solid transparent',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      fontWeight: selectedThemeId === item.id ? '700' : '600',
-                      color: 'var(--text-color)'
+                      boxShadow: selectedThemeId === th.id ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
+                      transition: 'transform 0.1s ease'
                     }}
-                  >
-                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: item.color, display: 'inline-block', boxShadow: '0 2px 4px rgba(0,0,0,0.15)' }}></span>
-                    <span style={{ fontSize: '0.85rem' }}>{t.themeNames[item.id]}</span>
-                  </button>
+                  />
                 ))}
               </div>
             </div>
 
-            <div className="divider"></div>
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+              <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>{t.notificationsLabel}</label>
+              <button 
+                type="button" 
+                onClick={enableMobileNotifications}
+                className="btn-primary"
+                style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}
+              >
+                {t.enableNotificationsBtn}
+              </button>
+            </div>
+
+            <div className="divider" style={{ margin: '20px 0', height: '1px', background: 'var(--border-color)' }}></div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button onClick={handleLogout} className="btn-logout">
+              <button onClick={handleLogout} className="btn-primary" style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}>
                 {t.logoutBtn}
               </button>
-
-              <button 
-                onClick={handleDeleteAccount} 
-                style={{
-                  backgroundColor: 'transparent',
-                  color: '#ef4444',
-                  border: '1px dashed #ef4444',
-                  padding: '12px',
-                  borderRadius: '14px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '0.9rem',
-                  transition: 'background 0.2s'
-                }}
-              >
+              <button onClick={handleDeleteAccount} className="btn-primary" style={{ backgroundColor: '#dc2626', color: '#fff' }}>
                 {t.deleteAccountBtn}
               </button>
             </div>
           </section>
         )}
-
       </main>
     </div>
   )
